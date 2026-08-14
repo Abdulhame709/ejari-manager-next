@@ -838,6 +838,10 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      approve_payment_request: {
+        Args: { p_payment_request_id: string };
+        Returns: string;
+      };
       can_delete: { Args: { _user_id: string }; Returns: boolean };
       can_manage: { Args: { _user_id: string }; Returns: boolean };
       get_user_role: {

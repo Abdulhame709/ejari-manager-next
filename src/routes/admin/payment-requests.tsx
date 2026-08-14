@@ -31,8 +31,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatMoney } from "@/lib/format";
-import type { Database } from "@/integrations/supabase/types";
-import { sanitizeSearchTerm } from "@/lib/utils";
+import { getErrorMessage, sanitizeSearchTerm } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/payment-requests")({
   head: () => ({
@@ -104,93 +103,12 @@ function AdminPaymentRequests() {
 
   const approveMutation = useMutation({
     mutationFn: async (pr: PaymentRequest) => {
-      // Create a receipt for this payment, then mark approved
-      if (!pr.tenant_accounts?.customers) throw new Error("لا يوجد مستأجر مرتبط");
-      if (!pr.tenant_account_id) throw new Error("لا يوجد حساب مستأجر مرتبط");
-      const { data: tenantAccount, error: taError } = await supabase
-        .from("tenant_accounts")
-        .select("customer_id")
-        .eq("id", pr.tenant_account_id)
-        .single();
-      if (taError) throw taError;
-      const customerId = tenantAccount?.customer_id;
-      if (!customerId) throw new Error("لا يوجد زبون مرتبط");
-
-      // Generate receipt number
-      const prefix = `RCP-${format(new Date(), "yyyyMM")}-`;
-      const { data: last } = await supabase
-        .from("receipts")
-        .select("receipt_no")
-        .like("receipt_no", prefix + "%")
-        .order("receipt_no", { ascending: false })
-        .limit(1);
-      const seq = last && last[0] ? parseInt(last[0].receipt_no.slice(prefix.length), 10) + 1 : 1;
-      const receiptNo = prefix + String(seq).padStart(4, "0");
-
-      // Find invoices for this customer that are unpaid, allocate
-      const { data: unpaidInvoices } = await supabase
-        .from("invoices")
-        .select("id, total_amount, paid_amount, remaining_amount")
-        .eq("customer_id", customerId)
-        .neq("payment_status", "paid")
-        .order("invoice_year")
-        .order("invoice_month");
-
-      let remain = pr.amount;
-      const details: { invoice_id: string; amount_paid: number }[] = [];
-      for (const inv of unpaidInvoices ?? []) {
-        if (remain <= 0) break;
-        const pay = Math.min(remain, inv.remaining_amount);
-        details.push({ invoice_id: inv.id, amount_paid: +pay.toFixed(2) });
-        const newPaid = +(inv.paid_amount + pay).toFixed(2);
-        const newRemaining = +(inv.total_amount - newPaid).toFixed(2);
-        await supabase
-          .from("invoices")
-          .update({
-            paid_amount: newPaid,
-            remaining_amount: Math.max(0, newRemaining),
-            payment_status: newRemaining <= 0.01 ? "paid" : newPaid > 0 ? "partial" : "unpaid",
-          })
-          .eq("id", inv.id);
-        remain = +(remain - pay).toFixed(2);
-      }
-
-      // Create the receipt
-      const { data: receipt, error: re } = await supabase
-        .from("receipts")
-        .insert({
-          receipt_no: receiptNo,
-          receipt_date: format(new Date(), "yyyy-MM-dd"),
-          customer_id: customerId,
-          amount: pr.amount,
-          payment_method: (pr.method === "cheque"
-            ? "check"
-            : pr.method) as Database["public"]["Enums"]["payment_method"],
-          reference_no: pr.reference_no,
-          bank_name: pr.bank_name,
-          is_active: true,
-          status: "posted",
-          notes: `اعتماد طلب دفع ${pr.id}`,
-        })
-        .select()
-        .single();
-      if (re) throw re;
-
-      if (details.length > 0) {
-        await supabase
-          .from("receipt_details")
-          .insert(details.map((d) => ({ ...d, receipt_id: receipt.id })));
-      }
-
-      // Update request
-      await supabase
-        .from("payment_requests")
-        .update({
-          status: "approved",
-          reviewed_at: new Date().toISOString(),
-          receipt_id: receipt.id,
-        })
-        .eq("id", pr.id);
+      const { data: receiptId, error } = await supabase.rpc("approve_payment_request", {
+        p_payment_request_id: pr.id,
+      });
+      if (error) throw error;
+      if (!receiptId) throw new Error("لم يتم إنشاء سند القبض");
+      return receiptId;
     },
     onSuccess: () => {
       toast.success("✅ تم اعتماد طلب الدفع وإنشاء سند القبض");
@@ -199,7 +117,7 @@ function AdminPaymentRequests() {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       setViewId(null);
     },
-    onError: (err: Error) => toast.error("❌ " + (err.message || "فشل الاعتماد")),
+    onError: (err: unknown) => toast.error("❌ " + getErrorMessage(err, "فشل الاعتماد")),
   });
 
   const rejectMutation = useMutation({
