@@ -1,0 +1,3 @@
+-- إنشاء Storage bucket عبر SQL Hinweis (ينفذ في Supabase Dashboard)
+-- اسم الباكيت: payment-receipts
+-- سياسات الوصول: فقط المستخدم المصادق مع RLS

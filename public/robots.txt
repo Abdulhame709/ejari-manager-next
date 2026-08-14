@@ -1,0 +1,21 @@
+# EJARI — robots.txt
+# Public marketing pages are crawlable; the admin & tenant portals are private.
+
+User-agent: *
+Allow: /$
+Allow: /units
+Allow: /login
+Disallow: /tenant
+Disallow: /admin
+Disallow: /invoices
+Disallow: /receipts
+Disallow: /contracts
+Disallow: /customers
+Disallow: /properties
+Disallow: /readings
+Disallow: /reports
+Disallow: /settings
+Disallow: /users
+Disallow: /shops
+
+Sitemap: https://ejari-manager-eta.vercel.app/sitemap.xml

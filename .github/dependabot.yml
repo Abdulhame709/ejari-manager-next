@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 5
+    groups:
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      dev-tooling:
+        dependency-type: development
+        patterns:
+          - "*"
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies
