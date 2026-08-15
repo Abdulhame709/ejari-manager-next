@@ -56,11 +56,12 @@ const content = {
     enter: "دخول آمن",
     createAccount: "إنشاء الحساب",
     tenantNote: "سجّل أو ادخل بحساب المستأجر للوصول إلى الفواتير وكشف الحساب.",
-    staffNote: "سجّل أو ادخل بحساب الإدارة؛ سيُفتح لك فقط ما يسمح به الدور المعيّن.",
+    staffNote:
+      "ادخل بحساب الإدارة أو الموظف؛ ينشئ مدير النظام حسابات الموظفين من لوحة إدارة المستخدمين.",
     visitorNote: "أنشئ حساب زائر لتصفح الوحدات وإرسال طلبات المعاينة دون وصول داخلي.",
     roleNote: "بعد الدخول سيتم توجيهك تلقائيًا حسب نوع الحساب والصلاحية المسجلة.",
     staffSignupNote:
-      "أول حساب حقيقي يصبح مديرًا عند عدم وجود مدير. الحسابات التالية تبدأ كمشاهد حتى يحدد المدير دورها.",
+      "التسجيل العام للموظفين مغلق. ينشئ مدير النظام حسابات الموظفين ويمَنح كل حساب الدور المناسب.",
     tenantSignupNote: "سيتم إنشاء سجل مستأجر جديد، أو ربط الحساب بسجلك الموجود عند تطابق البريد.",
     visitorSignupNote: "حساب الزائر لا يملك صلاحية الاطلاع على بيانات الإدارة أو المستأجرين.",
     confirmEmail: "تم إنشاء الحساب. تحقق من بريدك لتأكيده، ثم سجّل الدخول.",
@@ -92,13 +93,14 @@ const content = {
     enter: "Secure sign in",
     createAccount: "Create account",
     tenantNote: "Register or sign in as a tenant to access invoices and your statement.",
-    staffNote: "Register or sign in as staff. Only pages allowed by your assigned role will open.",
+    staffNote:
+      "Sign in as management or staff. An administrator creates staff accounts and assigns their roles.",
     visitorNote:
       "Create a visitor account to browse units and request viewings without internal access.",
     roleNote:
       "After sign-in, your saved account type and role determine the destination automatically.",
     staffSignupNote:
-      "The first real account becomes admin only when no admin exists. Later accounts start as viewers until assigned.",
+      "Public staff registration is disabled. An administrator creates staff accounts and assigns the appropriate role.",
     tenantSignupNote:
       "A tenant record is created, or an existing record is linked when the email matches.",
     visitorSignupNote: "Visitor accounts cannot access management or tenant data.",
@@ -174,6 +176,15 @@ function LoginPage() {
 
   async function handleSignup(event: React.FormEvent) {
     event.preventDefault();
+    if (mode === "staff") {
+      toast.error(
+        isArabic
+          ? "التسجيل العام للموظفين مغلق. اطلب من مدير النظام إنشاء الحساب."
+          : "Public staff registration is disabled. Ask an administrator to create the account.",
+      );
+      setTab("login");
+      return;
+    }
     if (submitting) return;
     if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
       toast.error(
@@ -328,7 +339,10 @@ function LoginPage() {
                       type="button"
                       role="tab"
                       aria-selected={mode === item}
-                      onClick={() => setMode(item)}
+                      onClick={() => {
+                        setMode(item);
+                        if (item === "staff") setTab("login");
+                      }}
                       className={`rounded-lg px-2 py-2.5 text-xs font-bold transition ${mode === item ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                     >
                       {item === "tenant" ? t.tenant : item === "visitor" ? t.visitor : t.staff}
@@ -336,22 +350,28 @@ function LoginPage() {
                   ))}
                 </div>
 
-                <div className="mb-5 grid grid-cols-2 rounded-lg bg-slate-100 p-1 text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setTab("login")}
-                    className={`rounded-md py-2 transition ${tab === "login" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500"}`}
-                  >
-                    {t.loginTab}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTab("signup")}
-                    className={`rounded-md py-2 transition ${tab === "signup" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500"}`}
-                  >
-                    {t.signupTab}
-                  </button>
-                </div>
+                {mode === "staff" ? (
+                  <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                    {t.staffSignupNote}
+                  </div>
+                ) : (
+                  <div className="mb-5 grid grid-cols-2 rounded-lg bg-slate-100 p-1 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setTab("login")}
+                      className={`rounded-md py-2 transition ${tab === "login" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500"}`}
+                    >
+                      {t.loginTab}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTab("signup")}
+                      className={`rounded-md py-2 transition ${tab === "signup" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500"}`}
+                    >
+                      {t.signupTab}
+                    </button>
+                  </div>
+                )}
 
                 <form
                   onSubmit={tab === "signup" ? handleSignup : handleSubmit}
