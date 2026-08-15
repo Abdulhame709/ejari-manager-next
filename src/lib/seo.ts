@@ -2,7 +2,7 @@
  * Central SEO configuration for EJARI.
  * Update SITE_URL when a custom domain is attached.
  */
-export const SITE_URL = "https://ejari-manager-eta.vercel.app";
+export const SITE_URL = "https://ejari-manager-next-2g.vercel.app";
 export const SITE_NAME = "إيجاري EJARI";
 export const SITE_TITLE = "إيجاري EJARI — إدارة الإيجارات بثقة";
 export const SITE_DESCRIPTION =

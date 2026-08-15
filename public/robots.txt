@@ -18,4 +18,4 @@ Disallow: /settings
 Disallow: /users
 Disallow: /shops
 
-Sitemap: https://ejari-manager-eta.vercel.app/sitemap.xml
+Sitemap: https://ejari-manager-next-2g.vercel.app/sitemap.xml

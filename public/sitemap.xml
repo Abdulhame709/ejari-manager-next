@@ -2,12 +2,12 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://ejari-manager-eta.vercel.app/units</loc>
+    <loc>https://ejari-manager-next-2g.vercel.app/units</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ejari-manager-eta.vercel.app/login</loc>
+    <loc>https://ejari-manager-next-2g.vercel.app/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
