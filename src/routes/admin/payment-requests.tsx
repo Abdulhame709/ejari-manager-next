@@ -123,14 +123,10 @@ function AdminPaymentRequests() {
   const rejectMutation = useMutation({
     mutationFn: async () => {
       if (!rejectOpen) return;
-      const { error } = await supabase
-        .from("payment_requests")
-        .update({
-          status: "rejected",
-          rejection_reason: reason || null,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq("id", rejectOpen.id);
+      const { error } = await supabase.rpc("reject_payment_request", {
+        p_payment_request_id: rejectOpen.id,
+        p_rejection_reason: reason.trim() || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {

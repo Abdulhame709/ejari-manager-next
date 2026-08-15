@@ -842,6 +842,10 @@ export type Database = {
         Args: { p_payment_request_id: string };
         Returns: string;
       };
+      reject_payment_request: {
+        Args: { p_payment_request_id: string; p_rejection_reason?: string | null };
+        Returns: undefined;
+      };
       can_delete: { Args: { _user_id: string }; Returns: boolean };
       can_manage: { Args: { _user_id: string }; Returns: boolean };
       get_user_role: {
