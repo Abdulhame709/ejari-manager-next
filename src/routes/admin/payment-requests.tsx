@@ -140,7 +140,7 @@ function AdminPaymentRequests() {
       setReason("");
       setViewId(null);
     },
-    onError: (err: Error) => toast.error("❌ " + (err.message || "فشل الرفض")),
+    onError: (err: unknown) => toast.error("❌ " + getErrorMessage(err, "فشل الرفض")),
   });
 
   return (

@@ -35,6 +35,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   };
 
   render() {
+    const showTechnicalDetails = import.meta.env.DEV;
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
       return (
@@ -44,12 +45,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           role="alert"
         >
           <div className="max-w-md text-center">
-            <div className="text-6xl">⚠️</div>
+            <div className="text-6xl" aria-hidden="true">
+              !
+            </div>
             <h1 className="mt-4 text-xl font-bold text-foreground">حدث خطأ غير متوقع</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               نعتذر عن هذا الخلل. حاول تحديث الصفحة، وإذا استمرت المشكلة تواصل مع الدعم.
             </p>
-            {this.state.error?.message && (
+            {showTechnicalDetails && this.state.error?.message && (
               <pre
                 className="mt-3 overflow-auto rounded-md bg-muted p-3 text-right text-xs text-muted-foreground"
                 dir="ltr"
