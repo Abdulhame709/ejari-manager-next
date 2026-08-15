@@ -9,77 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UsersRouteImport } from './routes/users'
-import { Route as UnitsRouteImport } from './routes/units'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as ReceiptsRouteImport } from './routes/receipts'
-import { Route as ReadingsRouteImport } from './routes/readings'
-import { Route as PropertiesRouteImport } from './routes/properties'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as InvoicesRouteImport } from './routes/invoices'
-import { Route as CustomersRouteImport } from './routes/customers'
-import { Route as ContractsRouteImport } from './routes/contracts'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TenantIndexRouteImport } from './routes/tenant/index'
-import { Route as ShopsIndexRouteImport } from './routes/shops/index'
-import { Route as TenantStatementRouteImport } from './routes/tenant/statement'
-import { Route as TenantProfileRouteImport } from './routes/tenant/profile'
-import { Route as TenantPaymentsRouteImport } from './routes/tenant/payments'
-import { Route as TenantLoginRouteImport } from './routes/tenant/login'
-import { Route as TenantInvoicesRouteImport } from './routes/tenant/invoices'
+import { Route as ContractsRouteImport } from './routes/contracts'
+import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as InvoicesRouteImport } from './routes/invoices'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PropertiesRouteImport } from './routes/properties'
+import { Route as ReadingsRouteImport } from './routes/readings'
+import { Route as ReceiptsRouteImport } from './routes/receipts'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as UnitsRouteImport } from './routes/units'
+import { Route as UsersRouteImport } from './routes/users'
 import { Route as AdminPaymentRequestsRouteImport } from './routes/admin/payment-requests'
-import { Route as ReceiptsReceiptIdPrintRouteImport } from './routes/receipts_.$receiptId.print'
+import { Route as ShopsIndexRouteImport } from './routes/shops/index'
+import { Route as TenantIndexRouteImport } from './routes/tenant/index'
+import { Route as TenantInvoicesRouteImport } from './routes/tenant/invoices'
+import { Route as TenantLoginRouteImport } from './routes/tenant/login'
+import { Route as TenantPaymentsRouteImport } from './routes/tenant/payments'
+import { Route as TenantProfileRouteImport } from './routes/tenant/profile'
+import { Route as TenantStatementRouteImport } from './routes/tenant/statement'
 import { Route as InvoicesInvoiceIdPrintRouteImport } from './routes/invoices_.$invoiceId.print'
+import { Route as ReceiptsReceiptIdPrintRouteImport } from './routes/receipts_.$receiptId.print'
 
-const UsersRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UnitsRoute = UnitsRouteImport.update({
-  id: '/units',
-  path: '/units',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReceiptsRoute = ReceiptsRouteImport.update({
-  id: '/receipts',
-  path: '/receipts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReadingsRoute = ReadingsRouteImport.update({
-  id: '/readings',
-  path: '/readings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PropertiesRoute = PropertiesRouteImport.update({
-  id: '/properties',
-  path: '/properties',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InvoicesRoute = InvoicesRouteImport.update({
-  id: '/invoices',
-  path: '/invoices',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CustomersRoute = CustomersRouteImport.update({
-  id: '/customers',
-  path: '/customers',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractsRoute = ContractsRouteImport.update({
@@ -87,44 +42,54 @@ const ContractsRoute = ContractsRouteImport.update({
   path: '/contracts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TenantIndexRoute = TenantIndexRouteImport.update({
-  id: '/tenant/',
-  path: '/tenant/',
+const InvoicesRoute = InvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ShopsIndexRoute = ShopsIndexRouteImport.update({
-  id: '/shops/',
-  path: '/shops/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TenantStatementRoute = TenantStatementRouteImport.update({
-  id: '/tenant/statement',
-  path: '/tenant/statement',
+const PropertiesRoute = PropertiesRouteImport.update({
+  id: '/properties',
+  path: '/properties',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TenantProfileRoute = TenantProfileRouteImport.update({
-  id: '/tenant/profile',
-  path: '/tenant/profile',
+const ReadingsRoute = ReadingsRouteImport.update({
+  id: '/readings',
+  path: '/readings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TenantPaymentsRoute = TenantPaymentsRouteImport.update({
-  id: '/tenant/payments',
-  path: '/tenant/payments',
+const ReceiptsRoute = ReceiptsRouteImport.update({
+  id: '/receipts',
+  path: '/receipts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TenantLoginRoute = TenantLoginRouteImport.update({
-  id: '/tenant/login',
-  path: '/tenant/login',
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TenantInvoicesRoute = TenantInvoicesRouteImport.update({
-  id: '/tenant/invoices',
-  path: '/tenant/invoices',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnitsRoute = UnitsRouteImport.update({
+  id: '/units',
+  path: '/units',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminPaymentRequestsRoute = AdminPaymentRequestsRouteImport.update({
@@ -132,14 +97,49 @@ const AdminPaymentRequestsRoute = AdminPaymentRequestsRouteImport.update({
   path: '/admin/payment-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ReceiptsReceiptIdPrintRoute = ReceiptsReceiptIdPrintRouteImport.update({
-  id: '/receipts_/$receiptId/print',
-  path: '/receipts/$receiptId/print',
+const ShopsIndexRoute = ShopsIndexRouteImport.update({
+  id: '/shops/',
+  path: '/shops/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantIndexRoute = TenantIndexRouteImport.update({
+  id: '/tenant/',
+  path: '/tenant/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantInvoicesRoute = TenantInvoicesRouteImport.update({
+  id: '/tenant/invoices',
+  path: '/tenant/invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantLoginRoute = TenantLoginRouteImport.update({
+  id: '/tenant/login',
+  path: '/tenant/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantPaymentsRoute = TenantPaymentsRouteImport.update({
+  id: '/tenant/payments',
+  path: '/tenant/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantProfileRoute = TenantProfileRouteImport.update({
+  id: '/tenant/profile',
+  path: '/tenant/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantStatementRoute = TenantStatementRouteImport.update({
+  id: '/tenant/statement',
+  path: '/tenant/statement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvoicesInvoiceIdPrintRoute = InvoicesInvoiceIdPrintRouteImport.update({
   id: '/invoices_/$invoiceId/print',
   path: '/invoices/$invoiceId/print',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReceiptsReceiptIdPrintRoute = ReceiptsReceiptIdPrintRouteImport.update({
+  id: '/receipts_/$receiptId/print',
+  path: '/receipts/$receiptId/print',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -318,74 +318,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/units': {
-      id: '/units'
-      path: '/units'
-      fullPath: '/units'
-      preLoaderRoute: typeof UnitsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/receipts': {
-      id: '/receipts'
-      path: '/receipts'
-      fullPath: '/receipts'
-      preLoaderRoute: typeof ReceiptsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/readings': {
-      id: '/readings'
-      path: '/readings'
-      fullPath: '/readings'
-      preLoaderRoute: typeof ReadingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/properties': {
-      id: '/properties'
-      path: '/properties'
-      fullPath: '/properties'
-      preLoaderRoute: typeof PropertiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invoices': {
-      id: '/invoices'
-      path: '/invoices'
-      fullPath: '/invoices'
-      preLoaderRoute: typeof InvoicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/customers': {
-      id: '/customers'
-      path: '/customers'
-      fullPath: '/customers'
-      preLoaderRoute: typeof CustomersRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contracts': {
@@ -395,60 +332,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tenant/': {
-      id: '/tenant/'
-      path: '/tenant'
-      fullPath: '/tenant/'
-      preLoaderRoute: typeof TenantIndexRouteImport
+    '/invoices': {
+      id: '/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof InvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/shops/': {
-      id: '/shops/'
-      path: '/shops'
-      fullPath: '/shops/'
-      preLoaderRoute: typeof ShopsIndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tenant/statement': {
-      id: '/tenant/statement'
-      path: '/tenant/statement'
-      fullPath: '/tenant/statement'
-      preLoaderRoute: typeof TenantStatementRouteImport
+    '/properties': {
+      id: '/properties'
+      path: '/properties'
+      fullPath: '/properties'
+      preLoaderRoute: typeof PropertiesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tenant/profile': {
-      id: '/tenant/profile'
-      path: '/tenant/profile'
-      fullPath: '/tenant/profile'
-      preLoaderRoute: typeof TenantProfileRouteImport
+    '/readings': {
+      id: '/readings'
+      path: '/readings'
+      fullPath: '/readings'
+      preLoaderRoute: typeof ReadingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tenant/payments': {
-      id: '/tenant/payments'
-      path: '/tenant/payments'
-      fullPath: '/tenant/payments'
-      preLoaderRoute: typeof TenantPaymentsRouteImport
+    '/receipts': {
+      id: '/receipts'
+      path: '/receipts'
+      fullPath: '/receipts'
+      preLoaderRoute: typeof ReceiptsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tenant/login': {
-      id: '/tenant/login'
-      path: '/tenant/login'
-      fullPath: '/tenant/login'
-      preLoaderRoute: typeof TenantLoginRouteImport
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tenant/invoices': {
-      id: '/tenant/invoices'
-      path: '/tenant/invoices'
-      fullPath: '/tenant/invoices'
-      preLoaderRoute: typeof TenantInvoicesRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/units': {
+      id: '/units'
+      path: '/units'
+      fullPath: '/units'
+      preLoaderRoute: typeof UnitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/payment-requests': {
@@ -458,11 +409,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPaymentRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/receipts_/$receiptId/print': {
-      id: '/receipts_/$receiptId/print'
-      path: '/receipts/$receiptId/print'
-      fullPath: '/receipts/$receiptId/print'
-      preLoaderRoute: typeof ReceiptsReceiptIdPrintRouteImport
+    '/shops/': {
+      id: '/shops/'
+      path: '/shops'
+      fullPath: '/shops/'
+      preLoaderRoute: typeof ShopsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenant/': {
+      id: '/tenant/'
+      path: '/tenant'
+      fullPath: '/tenant/'
+      preLoaderRoute: typeof TenantIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenant/invoices': {
+      id: '/tenant/invoices'
+      path: '/tenant/invoices'
+      fullPath: '/tenant/invoices'
+      preLoaderRoute: typeof TenantInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenant/login': {
+      id: '/tenant/login'
+      path: '/tenant/login'
+      fullPath: '/tenant/login'
+      preLoaderRoute: typeof TenantLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenant/payments': {
+      id: '/tenant/payments'
+      path: '/tenant/payments'
+      fullPath: '/tenant/payments'
+      preLoaderRoute: typeof TenantPaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenant/profile': {
+      id: '/tenant/profile'
+      path: '/tenant/profile'
+      fullPath: '/tenant/profile'
+      preLoaderRoute: typeof TenantProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenant/statement': {
+      id: '/tenant/statement'
+      path: '/tenant/statement'
+      fullPath: '/tenant/statement'
+      preLoaderRoute: typeof TenantStatementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invoices_/$invoiceId/print': {
@@ -470,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/invoices/$invoiceId/print'
       fullPath: '/invoices/$invoiceId/print'
       preLoaderRoute: typeof InvoicesInvoiceIdPrintRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/receipts_/$receiptId/print': {
+      id: '/receipts_/$receiptId/print'
+      path: '/receipts/$receiptId/print'
+      fullPath: '/receipts/$receiptId/print'
+      preLoaderRoute: typeof ReceiptsReceiptIdPrintRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
