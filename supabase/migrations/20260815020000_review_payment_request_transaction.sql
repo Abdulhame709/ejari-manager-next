@@ -52,7 +52,8 @@ BEGIN
     old_values,
     new_values,
     user_id,
-    user_name
+    user_name,
+    created_at
   )
   VALUES (
     'payment_requests',
@@ -61,7 +62,8 @@ BEGIN
     jsonb_build_object('status', v_old.status),
     jsonb_build_object('status', 'rejected', 'rejection_reason', v_reason),
     v_reviewer,
-    coalesce(auth.jwt()->>'email', v_reviewer::TEXT)
+    coalesce(auth.jwt()->>'email', v_reviewer::TEXT),
+    now()
   );
 END;
 $$;

@@ -163,7 +163,8 @@ BEGIN
     old_values,
     new_values,
     user_id,
-    user_name
+    user_name,
+    created_at
   )
   VALUES (
     'payment_requests',
@@ -172,7 +173,8 @@ BEGIN
     jsonb_build_object('status', 'pending_review'),
     jsonb_build_object('status', 'approved', 'receipt_id', v_receipt_id),
     v_reviewer,
-    COALESCE(auth.jwt()->>'email', v_reviewer::TEXT)
+    COALESCE(auth.jwt()->>'email', v_reviewer::TEXT),
+    now()
   );
 
   RETURN v_receipt_id;
