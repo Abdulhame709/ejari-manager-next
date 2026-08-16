@@ -17,6 +17,7 @@ import { Route as ReceiptsRouteImport } from './routes/receipts'
 import { Route as ReadingsRouteImport } from './routes/readings'
 import { Route as PropertiesRouteImport } from './routes/properties'
 import { Route as PermissionsRouteImport } from './routes/permissions'
+import { Route as MeterTypesRouteImport } from './routes/meter-types'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as CustomersRouteImport } from './routes/customers'
@@ -71,6 +72,11 @@ const PropertiesRoute = PropertiesRouteImport.update({
 const PermissionsRoute = PermissionsRouteImport.update({
   id: '/permissions',
   path: '/permissions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeterTypesRoute = MeterTypesRouteImport.update({
+  id: '/meter-types',
+  path: '/meter-types',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof CustomersRoute
   '/invoices': typeof InvoicesRoute
   '/login': typeof LoginRoute
+  '/meter-types': typeof MeterTypesRoute
   '/permissions': typeof PermissionsRoute
   '/properties': typeof PropertiesRoute
   '/readings': typeof ReadingsRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/customers': typeof CustomersRoute
   '/invoices': typeof InvoicesRoute
   '/login': typeof LoginRoute
+  '/meter-types': typeof MeterTypesRoute
   '/permissions': typeof PermissionsRoute
   '/properties': typeof PropertiesRoute
   '/readings': typeof ReadingsRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/customers': typeof CustomersRoute
   '/invoices': typeof InvoicesRoute
   '/login': typeof LoginRoute
+  '/meter-types': typeof MeterTypesRoute
   '/permissions': typeof PermissionsRoute
   '/properties': typeof PropertiesRoute
   '/readings': typeof ReadingsRoute
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/invoices'
     | '/login'
+    | '/meter-types'
     | '/permissions'
     | '/properties'
     | '/readings'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/invoices'
     | '/login'
+    | '/meter-types'
     | '/permissions'
     | '/properties'
     | '/readings'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/invoices'
     | '/login'
+    | '/meter-types'
     | '/permissions'
     | '/properties'
     | '/readings'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   CustomersRoute: typeof CustomersRoute
   InvoicesRoute: typeof InvoicesRoute
   LoginRoute: typeof LoginRoute
+  MeterTypesRoute: typeof MeterTypesRoute
   PermissionsRoute: typeof PermissionsRoute
   PropertiesRoute: typeof PropertiesRoute
   ReadingsRoute: typeof ReadingsRoute
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/permissions'
       fullPath: '/permissions'
       preLoaderRoute: typeof PermissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meter-types': {
+      id: '/meter-types'
+      path: '/meter-types'
+      fullPath: '/meter-types'
+      preLoaderRoute: typeof MeterTypesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -501,6 +521,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustomersRoute: CustomersRoute,
   InvoicesRoute: InvoicesRoute,
   LoginRoute: LoginRoute,
+  MeterTypesRoute: MeterTypesRoute,
   PermissionsRoute: PermissionsRoute,
   PropertiesRoute: PropertiesRoute,
   ReadingsRoute: ReadingsRoute,
