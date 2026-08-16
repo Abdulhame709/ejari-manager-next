@@ -565,6 +565,8 @@ function ShopsPage() {
           "status",
           "monthly_rent",
           "area_sqm",
+          "elec_meter_type",
+          "water_meter_type",
           "description",
         ]}
         previewColumns={["shop_code", "shop_name", "unit_type", "monthly_rent"]}
@@ -573,11 +575,22 @@ function ShopsPage() {
           const name = row.shop_name?.trim();
           const rent = Number(row.monthly_rent || 0);
           const area = Number(row.area_sqm || 0);
+          const elecMeterType = Number(row.elec_meter_type || 3);
+          const waterMeterType = Number(row.water_meter_type || 6);
           const unitTypes = ["shop", "apartment", "office", "warehouse", "land", "clinic", "other"];
           const statuses = ["available", "rented", "reserved", "maintenance", "inactive"];
           if (!code || !name) return { error: `السطر ${rowNumber}: كود الوحدة والاسم مطلوبان` };
-          if (Number.isNaN(rent) || rent < 0 || Number.isNaN(area) || area < 0)
-            return { error: `السطر ${rowNumber}: الإيجار والمساحة يجب أن يكونا أرقاماً موجبة` };
+          if (
+            Number.isNaN(rent) ||
+            rent < 0 ||
+            Number.isNaN(area) ||
+            area < 0 ||
+            !Number.isInteger(elecMeterType) ||
+            !Number.isInteger(waterMeterType)
+          )
+            return {
+              error: `السطر ${rowNumber}: الإيجار والمساحة ومعرّفات العدادات يجب أن تكون قيماً صحيحة`,
+            };
           if (row.unit_type && !unitTypes.includes(row.unit_type))
             return { error: `السطر ${rowNumber}: نوع الوحدة غير صحيح` };
           if (row.status && !statuses.includes(row.status))
@@ -595,8 +608,8 @@ function ShopsPage() {
               is_active: true,
               is_public: false,
               insurance_amount: 0,
-              elec_meter_type: 1,
-              water_meter_type: 5,
+              elec_meter_type: elecMeterType,
+              water_meter_type: waterMeterType,
               fixed_elec_amount: 0,
               fixed_water_amount: 0,
             },
