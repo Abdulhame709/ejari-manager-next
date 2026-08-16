@@ -21,7 +21,7 @@ export const PAGE_ROLES = {
   receipts: ["admin", "manager", "accountant"],
   reports: ["admin", "manager", "accountant", "viewer"],
   paymentRequests: ["admin", "manager", "accountant"],
-  users: ["admin"],
+  users: ["admin", "manager"],
   settings: ["admin", "manager"],
 } as const satisfies Record<string, readonly StaffRole[]>;
 

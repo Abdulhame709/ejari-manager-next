@@ -52,6 +52,9 @@ const content = {
     password: "كلمة المرور",
     fullName: "الاسم الكامل",
     phone: "رقم الهاتف",
+    idNumber: "رقم الهوية (اختياري)",
+    address: "العنوان (اختياري)",
+    requestSubmitted: "تم إرسال طلبك للمراجعة. ستتمكن من الدخول بعد موافقة الإدارة.",
     forgot: "نسيت كلمة المرور؟",
     enter: "دخول آمن",
     createAccount: "إنشاء الحساب",
@@ -89,6 +92,9 @@ const content = {
     password: "Password",
     fullName: "Full name",
     phone: "Phone number",
+    idNumber: "ID number (optional)",
+    address: "Address (optional)",
+    requestSubmitted: "Your request was sent for review. You can sign in after approval.",
     forgot: "Forgot password?",
     enter: "Secure sign in",
     createAccount: "Create account",
@@ -132,6 +138,8 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [address, setAddress] = useState("");
 
   const isArabic = language === "ar";
   const t = content[language];
@@ -218,6 +226,22 @@ function LoginPage() {
         }),
       );
       if (error) throw error;
+
+      if (mode === "tenant") {
+        const { error: requestError } = await supabase.rpc("submit_tenant_account_request", {
+          p_email: email.trim(),
+          p_full_name: fullName.trim(),
+          p_phone: phone.trim(),
+          p_id_number: idNumber.trim() || null,
+          p_address: address.trim() || null,
+          p_notes: null,
+        });
+        if (requestError) throw requestError;
+        toast.success(t.requestSubmitted);
+        setTab("login");
+        setPassword("");
+        return;
+      }
 
       if (data.session) {
         toast.success(isArabic ? "تم إنشاء الحساب وتسجيل الدخول" : "Account created and signed in");
@@ -389,6 +413,31 @@ function LoginPage() {
 
                   {tab === "signup" && (
                     <>
+                      {mode === "tenant" && (
+                        <>
+                          <label className="block">
+                            <span className="mb-2 block text-sm font-bold text-slate-700">
+                              {t.idNumber}
+                            </span>
+                            <input
+                              value={idNumber}
+                              onChange={(event) => setIdNumber(event.target.value)}
+                              dir="ltr"
+                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="mb-2 block text-sm font-bold text-slate-700">
+                              {t.address}
+                            </span>
+                            <input
+                              value={address}
+                              onChange={(event) => setAddress(event.target.value)}
+                              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                            />
+                          </label>
+                        </>
+                      )}
                       <label className="block">
                         <span className="mb-2 block text-sm font-bold text-slate-700">
                           {t.fullName}

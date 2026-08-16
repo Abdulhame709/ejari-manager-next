@@ -54,6 +54,46 @@ export type Database = {
           },
         ];
       };
+      account_requests: {
+        Row: {
+          id: string;
+          request_type: "tenant";
+          auth_user_id: string | null;
+          email: string;
+          full_name: string;
+          phone: string;
+          id_number: string | null;
+          address: string | null;
+          notes: string | null;
+          status: "pending" | "approved" | "rejected";
+          rejection_reason: string | null;
+          customer_id: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_type?: "tenant";
+          auth_user_id?: string | null;
+          email: string;
+          full_name: string;
+          phone: string;
+          id_number?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          status?: "pending" | "approved" | "rejected";
+          rejection_reason?: string | null;
+          customer_id?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["account_requests"]["Insert"]>;
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           id: string;
@@ -841,6 +881,29 @@ export type Database = {
       approve_payment_request: {
         Args: { p_payment_request_id: string };
         Returns: string;
+      };
+      approve_tenant_account_request: {
+        Args: { p_request_id: string };
+        Returns: Json;
+      };
+      reject_tenant_account_request: {
+        Args: { p_rejection_reason?: string | null; p_request_id: string };
+        Returns: undefined;
+      };
+      submit_tenant_account_request: {
+        Args: {
+          p_address?: string | null;
+          p_email: string;
+          p_full_name: string;
+          p_id_number?: string | null;
+          p_notes?: string | null;
+          p_phone: string;
+        };
+        Returns: string;
+      };
+      record_last_login: {
+        Args: Record<string, never>;
+        Returns: undefined;
       };
       reject_payment_request: {
         Args: { p_payment_request_id: string; p_rejection_reason?: string | null };

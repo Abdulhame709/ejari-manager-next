@@ -188,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFullName(profileResult.data.full_name ?? null);
         setCustomerId(tenantCustomerId);
         setRole(resolvedRole);
+        void supabase.rpc("record_last_login");
         setAccessError(
           resolvedRole
             ? null

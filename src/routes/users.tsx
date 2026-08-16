@@ -45,17 +45,19 @@ import {
   XCircle,
   Mail,
   User as UserIcon,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { validatePassword } from "@/lib/utils";
+import { AccountRequestsPanel } from "@/components/account-requests-panel";
 
 export const Route = createFileRoute("/users")({
   head: () => ({
     meta: [{ title: "المستخدمون — إيجاري" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: () => (
-    <RouteGuard allowedRoles={["admin"]}>
+    <RouteGuard allowedRoles={["admin", "manager"]}>
       <UsersPage />
     </RouteGuard>
   ),
@@ -72,6 +74,7 @@ interface UserRow {
   is_active: boolean | null;
   role: AppRole | null;
   last_sign_in_at: string | null;
+  last_login_at: string | null;
   created_at: string | null;
 }
 
@@ -251,6 +254,76 @@ function UsersPage() {
             دعوة مستخدم جديد
           </Button>
         </div>
+
+        <AccountRequestsPanel />
+
+        <Card className="border-sky-500/20 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-sky-500/5 px-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-700">
+                <Eye className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-bold">حسابات الزوار ونشاط الدخول</h2>
+                <p className="text-xs text-muted-foreground">
+                  متابعة الحسابات العامة دون كشف بيانات حساسة
+                </p>
+              </div>
+            </div>
+            <Badge className="bg-sky-500/20 text-sky-700">
+              {users.filter((u) => u.role === "visitor").length} زائر
+            </Badge>
+          </div>
+          <div className="overflow-x-auto">
+            {users.filter((u) => u.role === "visitor").length === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                لا توجد حسابات زوار بعد.
+              </p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-right">الزائر</th>
+                    <th className="px-3 py-2 text-center">الحالة</th>
+                    <th className="px-3 py-2 text-center">آخر دخول</th>
+                    <th className="px-3 py-2 text-center">تاريخ الإنشاء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users
+                    .filter((u) => u.role === "visitor")
+                    .map((visitor) => (
+                      <tr key={visitor.id} className="border-t">
+                        <td className="px-3 py-3">
+                          <div className="font-medium">{visitor.full_name || "زائر بدون اسم"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {visitor.phone || "لا يوجد هاتف"}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {visitor.is_active === false ? (
+                            <Badge variant="destructive">معطل</Badge>
+                          ) : (
+                            <Badge className="bg-emerald-500/20 text-emerald-700">نشط</Badge>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs text-muted-foreground">
+                          {visitor.last_login_at
+                            ? format(new Date(visitor.last_login_at), "yyyy/MM/dd HH:mm")
+                            : "لم يدخل بعد"}
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs text-muted-foreground">
+                          {visitor.created_at
+                            ? format(new Date(visitor.created_at), "yyyy/MM/dd")
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </Card>
 
         <Card className="p-3">
           <div className="relative">
@@ -442,6 +515,7 @@ async function fetchUsers(): Promise<UserRow[]> {
       is_active,
       account_type,
       created_at,
+      last_login_at,
       user_roles(role),
       tenant_accounts(customer_id)
     `,
@@ -457,6 +531,7 @@ async function fetchUsers(): Promise<UserRow[]> {
     is_active: boolean | null;
     account_type: string | null;
     created_at: string | null;
+    last_login_at: string | null;
     user_roles: { role: StaffRole }[] | null;
     tenant_accounts: { customer_id: string | null }[] | { customer_id: string | null } | null;
   };
@@ -485,6 +560,7 @@ async function fetchUsers(): Promise<UserRow[]> {
       is_active: p.is_active,
       role: highest,
       last_sign_in_at: null,
+      last_login_at: p.last_login_at,
       created_at: p.created_at,
     };
   });
