@@ -227,145 +227,18 @@ function InvoicesPage() {
     return { totalAmt, paidAmt, unpaidAmt, count };
   }, [invoices]);
 
-  // Generate bulk invoices mutation
+  // Generate invoices through the database transaction. This keeps the
+  // calculation, carry-forward balance, serial allocation and duplicate
+  // protection in one trusted boundary instead of the browser.
   const generateMutation = useMutation({
     mutationFn: async () => {
-      // Get active contracts for the month
-      const monthStart = new Date(year, month - 1, 1).toISOString().slice(0, 10);
-      const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
-      const { data: contracts, error: cerr } = await supabase
-        .from("contracts")
-        .select(
-          "*, customers(full_name), shops(shop_code, shop_name, elec_meter_type, water_meter_type, fixed_elec_amount, fixed_water_amount)",
-        )
-        .eq("status", "active")
-        .lte("start_date", monthEnd)
-        .gte("end_date", monthStart);
-      if (cerr) throw cerr;
-
-      // Existing invoices this month (to skip)
-      const { data: existing } = await supabase
-        .from("invoices")
-        .select("shop_id")
-        .eq("invoice_month", month)
-        .eq("invoice_year", year);
-      const existingShopIds = new Set((existing ?? []).map((e: { shop_id: string }) => e.shop_id));
-
-      // Get readings for this month
-      const { data: readings } = await supabase
-        .from("meter_readings")
-        .select("*")
-        .eq("reading_month", month)
-        .eq("reading_year", year);
-      const readingsMap: Record<string, Reading> = {};
-      (readings ?? []).forEach((r) => {
-        readingsMap[r.shop_id] = r as unknown as Reading;
+      const { data, error } = await supabase.rpc("generate_monthly_invoices", {
+        p_month: month,
+        p_year: year,
       });
-
-      // Get previous balances: remaining from last unpaid invoice prior to this month
-      const { data: prevInvs } = await supabase
-        .from("invoices")
-        .select("shop_id, remaining_amount")
-        .lt("invoice_year", year)
-        .or(`invoice_year.eq.${year},invoice_month.lt.${month}`)
-        .neq("payment_status", "paid");
-
-      const prevBalMap: Record<string, number> = {};
-      (prevInvs ?? []).forEach((inv: { shop_id: string; remaining_amount: number | null }) => {
-        prevBalMap[inv.shop_id] = (prevBalMap[inv.shop_id] ?? 0) + (inv.remaining_amount ?? 0);
-      });
-
-      const toInsert: Database["public"]["Tables"]["invoices"]["Insert"][] = [];
-      let seq = await nextInvoiceSeq(month, year);
-
-      type ContractWithShop = Contract & { shops: Shop };
-      for (const c of (contracts ?? []) as unknown as ContractWithShop[]) {
-        if (existingShopIds.has(c.shop_id)) continue;
-        const shop: Shop = c.shops;
-        const r = readingsMap[c.shop_id];
-        const elecMt = meterTypes.find((m) => m.id === shop.elec_meter_type);
-        const waterMt = meterTypes.find((m) => m.id === shop.water_meter_type);
-
-        let elecAmt = 0,
-          elecCons = 0,
-          elecPrice = 0,
-          ep = 0,
-          ec = 0;
-        let waterAmt = 0,
-          wCons = 0,
-          wPrice = 0,
-          wp = 0,
-          wc = 0;
-
-        if (elecMt) {
-          if (elecMt.is_fixed_fee) {
-            elecAmt = shop.fixed_elec_amount || elecMt.fixed_fee_amount;
-          } else {
-            elecPrice = elecMt.price_per_unit;
-            elecCons = r?.elec_consumption ?? 0;
-            elecAmt = elecCons * elecPrice;
-          }
-          ep = r?.elec_previous_reading ?? 0;
-          ec = r?.elec_current_reading ?? 0;
-        }
-        if (waterMt) {
-          if (waterMt.is_fixed_fee) {
-            waterAmt = shop.fixed_water_amount || waterMt.fixed_fee_amount;
-          } else {
-            wPrice = waterMt.price_per_unit;
-            wCons = r?.water_consumption ?? 0;
-            waterAmt = wCons * wPrice;
-          }
-          wp = r?.water_previous_reading ?? 0;
-          wc = r?.water_current_reading ?? 0;
-        }
-
-        const prevBal = prevBalMap[c.shop_id] ?? 0;
-        const total = +(
-          c.monthly_rent +
-          (c.holiday_increase || 0) +
-          elecAmt +
-          waterAmt +
-          prevBal
-        ).toFixed(2);
-
-        toInsert.push({
-          invoice_no: `INV-${year}${String(month).padStart(2, "0")}-${String(seq).padStart(4, "0")}`,
-          shop_id: c.shop_id,
-          customer_id: c.customer_id,
-          contract_id: c.id,
-          invoice_month: month,
-          invoice_year: year,
-          invoice_date: format(new Date(), "yyyy-MM-dd"),
-          due_date: format(new Date(year, month - 1, 10), "yyyy-MM-dd"),
-          rent_amount: c.monthly_rent,
-          holiday_increase: c.holiday_increase ?? 0,
-          elec_amount: elecAmt,
-          water_amount: waterAmt,
-          previous_balance: prevBal,
-          additional_charges: 0,
-          total_amount: total,
-          elec_prev_reading: ep,
-          elec_curr_reading: ec,
-          elec_consumption: elecCons,
-          elec_unit_price: elecPrice,
-          water_prev_reading: wp,
-          water_curr_reading: wc,
-          water_consumption: wCons,
-          water_unit_price: wPrice,
-          payment_status: total > 0 ? "unpaid" : "paid",
-          paid_amount: 0,
-          remaining_amount: total,
-        });
-        seq++;
-      }
-
-      if (toInsert.length === 0) {
-        return { created: 0, skipped: contracts?.length ?? 0 };
-      }
-      const { error } = await supabase.from("invoices").insert(toInsert);
       if (error) throw error;
-      return { created: toInsert.length, skipped: (contracts?.length ?? 0) - toInsert.length };
+      const result = (data ?? {}) as { created?: number; skipped?: number };
+      return { created: result.created ?? 0, skipped: result.skipped ?? 0 };
     },
     onSuccess: (res) => {
       toast.success(

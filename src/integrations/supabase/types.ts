@@ -942,6 +942,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: undefined;
       };
+      generate_monthly_invoices: {
+        Args: { p_month: number; p_year: number };
+        Returns: Json;
+      };
       admin_set_user_active: {
         Args: { p_is_active: boolean; p_user_id: string };
         Returns: undefined;
