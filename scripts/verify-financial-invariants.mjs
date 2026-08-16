@@ -7,6 +7,13 @@ const archiveSql = read("supabase/migrations/20260817020000_safe_archiving_and_a
 const invoiceRoute = read("src/routes/invoices.tsx");
 const reportsRoute = read("src/routes/reports.tsx");
 const accessControl = read("src/lib/access-control.ts");
+const loginRoute = read("src/routes/login.tsx");
+const csvImport = read("src/components/csv-import-dialog.tsx");
+const customersRoute = read("src/routes/customers.tsx");
+const shopsRoute = read("src/routes/shops/index.tsx");
+const paymentSql = read(
+  "supabase/migrations/20260815010000_approve_payment_request_transaction.sql",
+);
 
 assert.match(invoiceSql, /CREATE OR REPLACE FUNCTION public\.generate_monthly_invoices/);
 assert.match(invoiceSql, /pg_advisory_xact_lock/);
@@ -29,7 +36,18 @@ assert.match(archiveSql, /is_active = false/);
 assert.match(archiveSql, /action, new_values/);
 assert.match(reportsRoute, /neq\("status", "cancelled"\)/);
 assert.match(accessControl, /meterTypes: \["admin", "manager"\]/);
+assert.match(loginRoute, /هذا الحساب مسجل من قبل/);
+assert.match(loginRoute, /يرجى التحقق من البريد الإلكتروني أو كلمة السر/);
+assert.match(loginRoute, /تصفح الوحدات كزائر/);
+assert.match(csvImport, /parseCsv/);
+assert.match(csvImport, /لا يمكن اعتماد الاستيراد/);
+assert.match(customersRoute, /CsvImportDialog/);
+assert.match(shopsRoute, /CsvImportDialog/);
+assert.match(paymentSql, /FOR UPDATE/);
+assert.match(paymentSql, /can_manage/);
+assert.match(paymentSql, /REVOKE ALL ON FUNCTION public\.approve_payment_request/);
+assert.match(paymentSql, /audit_log/);
 
 console.log(
-  "Financial invariants verified: atomic generation, strict carry-forward period, safe archive RPCs, cancelled-invoice report exclusion, and meter-type access policy.",
+  "Acceptance guards verified: financial atomicity, safe archives, cancelled-invoice exclusion, meter-type access, auth messages, CSV preview validation, and payment approval controls.",
 );
