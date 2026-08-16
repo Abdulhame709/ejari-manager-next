@@ -10,7 +10,8 @@
     "preview": "wrangler dev --config .output/server/wrangler.json",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm run build",
+    "test:financial": "node scripts/verify-financial-invariants.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test:financial && npm run build",
     "format": "prettier --write ."
   },
   "dependencies": {
