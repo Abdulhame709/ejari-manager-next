@@ -55,12 +55,14 @@ import {
   Tag,
   MapPin,
   Hash,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { canDeleteOperationalRecords, PAGE_ROLES } from "@/lib/access-control";
 import React from "react";
 import { getErrorMessage, sanitizeSearchTerm } from "@/lib/utils";
+import { CsvImportDialog } from "@/components/csv-import-dialog";
 
 export const Route = createFileRoute("/shops/")({
   head: () => ({
@@ -196,6 +198,7 @@ function ShopsPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<Shop | null>(null);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteInfo, setDeleteInfo] = useState<{
@@ -338,12 +341,25 @@ function ShopsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Building2 className="h-6 w-6 text-primary" />
-              العقارات والوحدات
+              <Store className="h-6 w-6 text-primary" />
+              الوحدات
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">إجمالي: {total} وحدة</p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 ml-2" />
+              استيراد CSV
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingShop(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 ml-2" />
+              وحدة جديدة
+            </Button>
             {selectedShop && (
               <>
                 <Button
@@ -390,16 +406,6 @@ function ShopsPage() {
                 )}
               </>
             )}
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingShop(null);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 ml-1" />
-              إضافة وحدة
-            </Button>
           </div>
         </div>
 
@@ -546,13 +552,74 @@ function ShopsPage() {
         }}
       />
 
+      <CsvImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="استيراد الوحدات"
+        description="استخدم القالب، راجع الصفوف، ثم أكد الإدراج. يجب أن تكون أكواد الوحدات فريدة وأن تكون property_id قيمة صحيحة عند استخدامها."
+        headers={[
+          "shop_code",
+          "shop_name",
+          "property_id",
+          "unit_type",
+          "status",
+          "monthly_rent",
+          "area_sqm",
+          "description",
+        ]}
+        previewColumns={["shop_code", "shop_name", "unit_type", "monthly_rent"]}
+        parseRow={(row, rowNumber) => {
+          const code = row.shop_code?.trim();
+          const name = row.shop_name?.trim();
+          const rent = Number(row.monthly_rent || 0);
+          const area = Number(row.area_sqm || 0);
+          const unitTypes = ["shop", "apartment", "office", "warehouse", "land", "clinic", "other"];
+          const statuses = ["available", "rented", "reserved", "maintenance", "inactive"];
+          if (!code || !name) return { error: `السطر ${rowNumber}: كود الوحدة والاسم مطلوبان` };
+          if (Number.isNaN(rent) || rent < 0 || Number.isNaN(area) || area < 0)
+            return { error: `السطر ${rowNumber}: الإيجار والمساحة يجب أن يكونا أرقاماً موجبة` };
+          if (row.unit_type && !unitTypes.includes(row.unit_type))
+            return { error: `السطر ${rowNumber}: نوع الوحدة غير صحيح` };
+          if (row.status && !statuses.includes(row.status))
+            return { error: `السطر ${rowNumber}: حالة الوحدة غير صحيحة` };
+          return {
+            value: {
+              shop_code: code,
+              shop_name: name,
+              property_id: row.property_id?.trim() || null,
+              unit_type: (row.unit_type || "shop") as UnitType,
+              status: (row.status || "available") as UnitStatus,
+              monthly_rent: rent,
+              area_sqm: area,
+              description: row.description?.trim() || null,
+              is_active: true,
+              is_public: false,
+              insurance_amount: 0,
+              elec_meter_type: 1,
+              water_meter_type: 5,
+              fixed_elec_amount: 0,
+              fixed_water_amount: 0,
+            },
+          };
+        }}
+        onImport={async (rows) => {
+          const codes = rows.map((row) => row.shop_code);
+          if (new Set(codes).size !== codes.length)
+            throw new Error("يوجد كود وحدة مكرر داخل الملف");
+          const { error } = await supabase.from("shops").insert(rows);
+          if (error) throw error;
+          await qc.invalidateQueries({ queryKey: ["shops"] });
+        }}
+      />
+
       <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد حذف الوحدة</AlertDialogTitle>
+            <AlertDialogTitle>تأكيد أرشفة الوحدة</AlertDialogTitle>
             <AlertDialogDescription className="space-y-1">
               <span className="block">
-                هل أنت متأكد من حذف الوحدة <strong>"{selectedShop?.shop_name}"</strong> نهائياً؟
+                هل أنت متأكد من أرشفة الوحدة <strong>"{selectedShop?.shop_name}"</strong>؟ ستبقى
+                الفواتير والقراءات والعقود محفوظة.
               </span>
               {deleteInfo &&
                 deleteInfo.contracts +
@@ -561,7 +628,7 @@ function ShopsPage() {
                   deleteInfo.images >
                   0 && (
                   <span className="block text-destructive font-medium mt-2">
-                    ⚠️ سيتم حذف البيانات المرتبطة:
+                    ℹ️ ستبقى البيانات المرتبطة محفوظة:
                     {deleteInfo.contracts > 0 && (
                       <span className="block">• {deleteInfo.contracts} عقد</span>
                     )}
@@ -587,7 +654,7 @@ function ShopsPage() {
               {deleteMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "حذف نهائي"
+                "أرشفة الوحدة"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

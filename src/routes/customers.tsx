@@ -45,12 +45,14 @@ import {
   MapPin,
   Loader2,
   ToggleLeft,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { canDeleteOperationalRecords, PAGE_ROLES } from "@/lib/access-control";
 import { sanitizeSearchTerm } from "@/lib/utils";
 import { TableSkeleton } from "@/components/data-states";
+import { CsvImportDialog } from "@/components/csv-import-dialog";
 
 export const Route = createFileRoute("/customers")({
   head: () => ({
@@ -113,6 +115,7 @@ function CustomersList() {
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customers", search, statusFilter, page],
@@ -221,10 +224,16 @@ function CustomersList() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">إجمالي {total} عميل</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 ml-2" />
-          عميل جديد
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 ml-2" />
+            استيراد CSV
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 ml-2" />
+            عميل جديد
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -355,6 +364,38 @@ function CustomersList() {
           </Button>
         </div>
       )}
+
+      <CsvImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="استيراد العملاء"
+        description="استخدم القالب، راجع المعاينة، ثم أكد الإدراج. العملية دفعة واحدة؛ إذا فشل أي صف فلن يتم اعتماد الملف."
+        headers={["full_name", "phone", "email", "id_number", "address"]}
+        previewColumns={["full_name", "phone", "email", "id_number"]}
+        parseRow={(row, rowNumber) => {
+          const fullName = row.full_name?.trim();
+          const phone = row.phone?.trim();
+          if (!fullName || !phone) return { error: `السطر ${rowNumber}: الاسم والجوال مطلوبان` };
+          return {
+            value: {
+              full_name: fullName,
+              phone,
+              email: row.email?.trim() || null,
+              id_number: row.id_number?.trim() || null,
+              address: row.address?.trim() || null,
+              is_active: true,
+            },
+          };
+        }}
+        onImport={async (rows) => {
+          const phones = rows.map((row) => row.phone);
+          if (new Set(phones).size !== phones.length)
+            throw new Error("يوجد رقم جوال مكرر داخل الملف");
+          const { error } = await supabase.from("customers").insert(rows);
+          if (error) throw error;
+          await qc.invalidateQueries({ queryKey: ["customers"] });
+        }}
+      />
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
