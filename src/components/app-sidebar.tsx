@@ -54,6 +54,12 @@ const NAV_ITEMS: NavItem[] = [
   },
   { to: "/reports", label: "التقارير", icon: BarChart3, roles: PAGE_ROLES.reports },
   { to: "/users", label: "المستخدمون والطلبات", icon: ShieldCheck, roles: PAGE_ROLES.users },
+  {
+    to: "/permissions",
+    label: "صلاحيات المستخدمين",
+    icon: ShieldCheck,
+    roles: PAGE_ROLES.permissions,
+  },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: PAGE_ROLES.settings },
 ];
 

@@ -54,7 +54,8 @@ const content = {
     phone: "رقم الهاتف",
     idNumber: "رقم الهوية (اختياري)",
     address: "العنوان (اختياري)",
-    requestSubmitted: "تم إرسال طلبك للمراجعة. ستتمكن من الدخول بعد موافقة الإدارة.",
+    requestSubmitted:
+      "تم إرسال طلبك للمراجعة. يجب تأكيد بريدك الإلكتروني، ثم ستتمكن من الدخول بعد موافقة الإدارة.",
     forgot: "نسيت كلمة المرور؟",
     enter: "دخول آمن",
     createAccount: "إنشاء الحساب",
@@ -64,11 +65,12 @@ const content = {
     visitorNote: "أنشئ حساب زائر لتصفح الوحدات وإرسال طلبات المعاينة دون وصول داخلي.",
     roleNote: "بعد الدخول سيتم توجيهك تلقائيًا حسب نوع الحساب والصلاحية المسجلة.",
     staffSignupNote:
-      "التسجيل العام للموظفين مغلق. ينشئ مدير النظام حسابات الموظفين ويمَنح كل حساب الدور المناسب.",
+      "أنشئ طلب حساب موظف. يجب تأكيد البريد الإلكتروني ثم مراجعة الطلب والموافقة عليه من الإدارة.",
     tenantSignupNote: "سيتم إنشاء سجل مستأجر جديد، أو ربط الحساب بسجلك الموجود عند تطابق البريد.",
-    visitorSignupNote: "حساب الزائر لا يملك صلاحية الاطلاع على بيانات الإدارة أو المستأجرين.",
+    visitorSignupNote:
+      "أنشئ حساب زائر بالبريد الإلكتروني، وبعد تأكيده ستدخل مباشرة لاستعراض الوحدات دون صلاحيات داخلية.",
     confirmEmail: "تم إنشاء الحساب. تحقق من بريدك لتأكيده، ثم سجّل الدخول.",
-    browse: "تصفح الوحدات كزائر دون حساب",
+    browse: "تصفح الوحدات كزائر",
     trusted: "منصة إيجارية مصممة لاحتياجات السوق اليمني",
     secure: "بياناتك محمية ومشفرة",
     rights: "© 2026 إيجاري EJARI. جميع الحقوق محفوظة.",
@@ -94,7 +96,8 @@ const content = {
     phone: "Phone number",
     idNumber: "ID number (optional)",
     address: "Address (optional)",
-    requestSubmitted: "Your request was sent for review. You can sign in after approval.",
+    requestSubmitted:
+      "Your request was sent for review. Confirm your email, then sign in after approval.",
     forgot: "Forgot password?",
     enter: "Secure sign in",
     createAccount: "Create account",
@@ -106,12 +109,13 @@ const content = {
     roleNote:
       "After sign-in, your saved account type and role determine the destination automatically.",
     staffSignupNote:
-      "Public staff registration is disabled. An administrator creates staff accounts and assigns the appropriate role.",
+      "Create a staff account request. Confirm your email, then wait for administrative review and approval.",
     tenantSignupNote:
       "A tenant record is created, or an existing record is linked when the email matches.",
-    visitorSignupNote: "Visitor accounts cannot access management or tenant data.",
+    visitorSignupNote:
+      "Create a visitor account with your email. After confirmation, you can enter the unit catalogue directly without internal access.",
     confirmEmail: "Account created. Confirm it from your email, then sign in.",
-    browse: "Browse available units without an account",
+    browse: "Browse units as a visitor",
     trusted: "A rental platform made for the Yemeni market",
     secure: "Your data is encrypted and protected",
     rights: "© 2026 EJARI. All rights reserved.",
@@ -184,17 +188,12 @@ function LoginPage() {
 
   async function handleSignup(event: React.FormEvent) {
     event.preventDefault();
-    if (mode === "staff") {
-      toast.error(
-        isArabic
-          ? "التسجيل العام للموظفين مغلق. اطلب من مدير النظام إنشاء الحساب."
-          : "Public staff registration is disabled. Ask an administrator to create the account.",
-      );
-      setTab("login");
+    if (submitting) return;
+    if (mode !== "staff" && !fullName.trim()) {
+      toast.error(isArabic ? "يرجى إدخال الاسم الكامل" : "Please enter your full name");
       return;
     }
-    if (submitting) return;
-    if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
+    if (!email.trim() || !password || (mode === "staff" && !phone.trim())) {
       toast.error(
         isArabic ? "يرجى إكمال جميع الحقول المطلوبة" : "Please complete all required fields",
       );
@@ -218,8 +217,8 @@ function LoginPage() {
           password,
           options: {
             data: {
-              full_name: fullName.trim(),
-              phone: phone.trim(),
+              full_name: fullName.trim() || email.trim(),
+              phone: phone.trim() || null,
               account_type: mode,
             },
           },
@@ -238,6 +237,22 @@ function LoginPage() {
         });
         if (requestError) throw requestError;
         toast.success(t.requestSubmitted);
+        if (data.session) await supabase.auth.signOut();
+        setTab("login");
+        setPassword("");
+        return;
+      }
+
+      if (mode === "staff") {
+        const { error: requestError } = await supabase.rpc("submit_staff_account_request", {
+          p_email: email.trim(),
+          p_full_name: fullName.trim() || email.trim(),
+          p_phone: phone.trim(),
+          p_notes: null,
+        });
+        if (requestError) throw requestError;
+        toast.success(t.requestSubmitted);
+        if (data.session) await supabase.auth.signOut();
         setTab("login");
         setPassword("");
         return;
@@ -545,13 +560,18 @@ function LoginPage() {
               </>
             )}
 
-            <Link
-              to="/units"
-              className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-800"
+            <button
+              type="button"
+              onClick={() => {
+                setMode("visitor");
+                setTab("login");
+                setForgotMode(false);
+              }}
+              className="mt-5 flex w-full items-center justify-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-800"
             >
               {t.browse}
               <ArrowLeft className="h-4 w-4" />
-            </Link>
+            </button>
             <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> {t.secure}
             </div>
@@ -702,7 +722,7 @@ function getErrorMessage(error: unknown): string {
 function englishAuthError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login") || normalized.includes("invalid credentials")) {
-    return "This account is not registered or the credentials are incorrect. Register first, then sign in.";
+    return "This email is not registered or the credentials are incorrect. Register first, confirm your email, then wait for approval if required.";
   }
   if (normalized.includes("already registered") || normalized.includes("user already registered")) {
     return "This account is already registered. Sign in or reset its password.";
@@ -713,7 +733,7 @@ function englishAuthError(message: string): string {
 function arabicAuthError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login") || normalized.includes("invalid credentials")) {
-    return "الحساب غير مسجل أو بيانات الدخول غير صحيحة. أنشئ حسابًا أولًا ثم سجّل الدخول.";
+    return "هذا البريد غير مسجل أو بيانات الدخول غير صحيحة. أنشئ حسابًا أولاً، وأكّد بريدك، ثم انتظر موافقة الإدارة إذا كان الحساب موظفاً أو مستأجراً.";
   }
   if (normalized.includes("already registered") || normalized.includes("user already registered")) {
     return "هذا الحساب مسجل مسبقًا. انتقل إلى تسجيل الدخول أو استخدم استعادة كلمة المرور.";

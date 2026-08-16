@@ -22,6 +22,7 @@ export const PAGE_ROLES = {
   reports: ["admin", "manager", "accountant", "viewer"],
   paymentRequests: ["admin", "manager", "accountant"],
   users: ["admin", "manager"],
+  permissions: ["admin"],
   settings: ["admin", "manager"],
 } as const satisfies Record<string, readonly StaffRole[]>;
 
@@ -62,6 +63,7 @@ export function canAccessPath(role: AppRole | null, pathname: string): boolean {
   if (normalized.startsWith("/receipts")) return hasAnyRole(role, PAGE_ROLES.receipts);
   if (normalized.startsWith("/reports")) return hasAnyRole(role, PAGE_ROLES.reports);
   if (normalized.startsWith("/users")) return hasAnyRole(role, PAGE_ROLES.users);
+  if (normalized.startsWith("/permissions")) return hasAnyRole(role, PAGE_ROLES.permissions);
   if (normalized.startsWith("/settings")) return hasAnyRole(role, PAGE_ROLES.settings);
 
   return false;

@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(
     async (userId: string, requestId: number, accountType: AccountType) => {
       try {
-        const [profileResult, rolesResult, tenantResult] = await withTimeout(
+        const [profileResult, rolesResult, tenantResult, requestResult] = await withTimeout(
           Promise.all([
             supabase
               .from("profiles")
@@ -157,6 +157,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .eq("user_id", userId)
               .eq("is_active", true)
               .maybeSingle(),
+            supabase
+              .from("account_requests")
+              .select("status, request_type, rejection_reason, created_at")
+              .eq("auth_user_id", userId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
           ]),
           PROFILE_TIMEOUT_MS,
         );
@@ -164,12 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profileResult.error) throw profileResult.error;
         if (rolesResult.error) throw rolesResult.error;
         if (tenantResult.error) throw tenantResult.error;
+        if (requestResult.error) throw requestResult.error;
         if (!profileResult.data) throw new Error("لم يتم العثور على ملف المستخدم");
         if (profileResult.data.is_active === false) throw new InactiveAccountError();
         if (!mountedRef.current || requestId !== profileRequestRef.current) return;
 
         const staffRole = selectHighestStaffRole(rolesResult.data ?? []);
         const tenantCustomerId = tenantResult.data?.customer_id ?? null;
+        const latestRequest = requestResult.data;
         const storedAccountType = profileResult.data.account_type;
         const resolvedAccountType: AccountType =
           storedAccountType === "staff" ||
@@ -189,12 +198,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCustomerId(tenantCustomerId);
         setRole(resolvedRole);
         void supabase.rpc("record_last_login");
+        const pendingMessage =
+          latestRequest?.status === "pending"
+            ? resolvedAccountType === "tenant"
+              ? "تم استلام طلب حساب المستأجر. أكّد بريدك الإلكتروني وانتظر موافقة الإدارة قبل الدخول."
+              : "تم استلام طلب حساب الموظف. أكّد بريدك الإلكتروني وانتظر موافقة الإدارة قبل الدخول."
+            : latestRequest?.status === "rejected"
+              ? `تم رفض طلب الحساب${latestRequest.rejection_reason ? `: ${latestRequest.rejection_reason}` : ". تواصل مع الإدارة."}`
+              : null;
         setAccessError(
           resolvedRole
             ? null
-            : resolvedAccountType === "tenant"
-              ? "تم إنشاء الحساب، لكن تعذر ربطه بسجل مستأجر. تواصل مع الإدارة لإكمال الربط."
-              : "لا توجد صلاحية مفعّلة لهذا الحساب. اطلب من مدير النظام تعيين الدور المناسب.",
+            : (pendingMessage ??
+                (resolvedAccountType === "tenant"
+                  ? "تم إنشاء الحساب، لكن تعذر ربطه بسجل مستأجر. تواصل مع الإدارة لإكمال الربط."
+                  : "لا توجد صلاحية مفعّلة لهذا الحساب. اطلب من مدير النظام تعيين الدور المناسب.")),
         );
       } catch (error: unknown) {
         if (!mountedRef.current || requestId !== profileRequestRef.current) return;

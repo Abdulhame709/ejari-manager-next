@@ -16,6 +16,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReceiptsRouteImport } from './routes/receipts'
 import { Route as ReadingsRouteImport } from './routes/readings'
 import { Route as PropertiesRouteImport } from './routes/properties'
+import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as CustomersRouteImport } from './routes/customers'
@@ -65,6 +66,11 @@ const ReadingsRoute = ReadingsRouteImport.update({
 const PropertiesRoute = PropertiesRouteImport.update({
   id: '/properties',
   path: '/properties',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PermissionsRoute = PermissionsRouteImport.update({
+  id: '/permissions',
+  path: '/permissions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof CustomersRoute
   '/invoices': typeof InvoicesRoute
   '/login': typeof LoginRoute
+  '/permissions': typeof PermissionsRoute
   '/properties': typeof PropertiesRoute
   '/readings': typeof ReadingsRoute
   '/receipts': typeof ReceiptsRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/customers': typeof CustomersRoute
   '/invoices': typeof InvoicesRoute
   '/login': typeof LoginRoute
+  '/permissions': typeof PermissionsRoute
   '/properties': typeof PropertiesRoute
   '/readings': typeof ReadingsRoute
   '/receipts': typeof ReceiptsRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/customers': typeof CustomersRoute
   '/invoices': typeof InvoicesRoute
   '/login': typeof LoginRoute
+  '/permissions': typeof PermissionsRoute
   '/properties': typeof PropertiesRoute
   '/readings': typeof ReadingsRoute
   '/receipts': typeof ReceiptsRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/invoices'
     | '/login'
+    | '/permissions'
     | '/properties'
     | '/readings'
     | '/receipts'
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/invoices'
     | '/login'
+    | '/permissions'
     | '/properties'
     | '/readings'
     | '/receipts'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/invoices'
     | '/login'
+    | '/permissions'
     | '/properties'
     | '/readings'
     | '/receipts'
@@ -297,6 +309,7 @@ export interface RootRouteChildren {
   CustomersRoute: typeof CustomersRoute
   InvoicesRoute: typeof InvoicesRoute
   LoginRoute: typeof LoginRoute
+  PermissionsRoute: typeof PermissionsRoute
   PropertiesRoute: typeof PropertiesRoute
   ReadingsRoute: typeof ReadingsRoute
   ReceiptsRoute: typeof ReceiptsRoute
@@ -365,6 +378,13 @@ declare module '@tanstack/react-router' {
       path: '/properties'
       fullPath: '/properties'
       preLoaderRoute: typeof PropertiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/permissions': {
+      id: '/permissions'
+      path: '/permissions'
+      fullPath: '/permissions'
+      preLoaderRoute: typeof PermissionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -481,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustomersRoute: CustomersRoute,
   InvoicesRoute: InvoicesRoute,
   LoginRoute: LoginRoute,
+  PermissionsRoute: PermissionsRoute,
   PropertiesRoute: PropertiesRoute,
   ReadingsRoute: ReadingsRoute,
   ReceiptsRoute: ReceiptsRoute,

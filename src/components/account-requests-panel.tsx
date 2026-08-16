@@ -21,6 +21,7 @@ type RequestStatus = "pending" | "approved" | "rejected";
 
 type AccountRequest = {
   id: string;
+  request_type: "tenant" | "staff";
   email: string;
   full_name: string;
   phone: string;
@@ -58,14 +59,15 @@ export function AccountRequestsPanel() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      const { error } = await supabase.rpc("approve_tenant_account_request", {
-        p_request_id: requestId,
-      });
+    mutationFn: async (request: AccountRequest) => {
+      const { error } =
+        request.request_type === "staff"
+          ? await supabase.rpc("approve_staff_account_request", { p_request_id: request.id })
+          : await supabase.rpc("approve_tenant_account_request", { p_request_id: request.id });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("تمت الموافقة وربط حساب المستأجر بنجاح");
+      toast.success("تمت الموافقة على الطلب وتفعيل الحساب حسب نوعه");
       void qc.invalidateQueries({ queryKey: ["account-requests"] });
       void qc.invalidateQueries({ queryKey: ["users"] });
     },
@@ -75,15 +77,20 @@ export function AccountRequestsPanel() {
   const rejectMutation = useMutation({
     mutationFn: async ({
       requestId,
+      requestType,
       rejectionReason,
     }: {
       requestId: string;
+      requestType: "tenant" | "staff";
       rejectionReason: string;
     }) => {
-      const { error } = await supabase.rpc("reject_tenant_account_request", {
-        p_request_id: requestId,
-        p_rejection_reason: rejectionReason.trim() || null,
-      });
+      const { error } = await supabase.rpc(
+        requestType === "staff" ? "reject_account_request" : "reject_tenant_account_request",
+        {
+          p_request_id: requestId,
+          p_rejection_reason: rejectionReason.trim() || null,
+        },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -105,9 +112,9 @@ export function AccountRequestsPanel() {
             <Clock3 className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-bold">طلبات فتح حسابات المستأجرين</h2>
+            <h2 className="font-bold">طلبات فتح الحسابات</h2>
             <p className="text-xs text-muted-foreground">
-              مراجعة الطلبات قبل ربط الحساب ببيانات المستأجر
+              مراجعة طلبات المستأجرين والموظفين قبل تفعيل الصلاحية
             </p>
           </div>
         </div>
@@ -144,17 +151,22 @@ export function AccountRequestsPanel() {
                     </p>
                   </div>
                 </div>
-                <Badge
-                  variant={
-                    request.status === "pending"
-                      ? "outline"
-                      : request.status === "approved"
-                        ? "default"
-                        : "destructive"
-                  }
-                >
-                  {STATUS_LABELS[request.status]}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {request.request_type === "staff" ? "موظف" : "مستأجر"}
+                  </Badge>
+                  <Badge
+                    variant={
+                      request.status === "pending"
+                        ? "outline"
+                        : request.status === "approved"
+                          ? "default"
+                          : "destructive"
+                    }
+                  >
+                    {STATUS_LABELS[request.status]}
+                  </Badge>
+                </div>
               </div>
               <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
                 <span>تاريخ الطلب: {format(new Date(request.created_at), "yyyy/MM/dd HH:mm")}</span>
@@ -170,7 +182,7 @@ export function AccountRequestsPanel() {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
-                    onClick={() => approveMutation.mutate(request.id)}
+                    onClick={() => approveMutation.mutate(request)}
                     disabled={approveMutation.isPending || rejectMutation.isPending}
                   >
                     {approveMutation.isPending ? (
@@ -178,7 +190,9 @@ export function AccountRequestsPanel() {
                     ) : (
                       <CheckCircle2 className="ml-1 h-4 w-4" />
                     )}
-                    موافقة وربط المستأجر
+                    {request.request_type === "staff"
+                      ? "موافقة وتفعيل الموظف"
+                      : "موافقة وربط المستأجر"}
                   </Button>
                   <Button
                     size="sm"
@@ -199,7 +213,7 @@ export function AccountRequestsPanel() {
       <Dialog open={!!rejecting} onOpenChange={(open) => !open && setRejecting(null)}>
         <DialogContent dir="rtl">
           <DialogHeader>
-            <DialogTitle>رفض طلب حساب المستأجر</DialogTitle>
+            <DialogTitle>رفض طلب الحساب</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
             <Label>سبب الرفض (اختياري)</Label>
@@ -218,7 +232,11 @@ export function AccountRequestsPanel() {
               disabled={!rejecting || rejectMutation.isPending}
               onClick={() =>
                 rejecting &&
-                rejectMutation.mutate({ requestId: rejecting.id, rejectionReason: reason })
+                rejectMutation.mutate({
+                  requestId: rejecting.id,
+                  requestType: rejecting.request_type,
+                  rejectionReason: reason,
+                })
               }
             >
               {rejectMutation.isPending && <Loader2 className="ml-1 h-4 w-4 animate-spin" />} تأكيد

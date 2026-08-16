@@ -57,7 +57,7 @@ export type Database = {
       account_requests: {
         Row: {
           id: string;
-          request_type: "tenant";
+          request_type: "tenant" | "staff";
           auth_user_id: string | null;
           email: string;
           full_name: string;
@@ -75,7 +75,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          request_type?: "tenant";
+          request_type?: "tenant" | "staff";
           auth_user_id?: string | null;
           email: string;
           full_name: string;
@@ -882,13 +882,30 @@ export type Database = {
         Args: { p_payment_request_id: string };
         Returns: string;
       };
+      approve_staff_account_request: {
+        Args: { p_request_id: string };
+        Returns: Json;
+      };
       approve_tenant_account_request: {
         Args: { p_request_id: string };
         Returns: Json;
       };
+      reject_account_request: {
+        Args: { p_rejection_reason?: string | null; p_request_id: string };
+        Returns: undefined;
+      };
       reject_tenant_account_request: {
         Args: { p_rejection_reason?: string | null; p_request_id: string };
         Returns: undefined;
+      };
+      submit_staff_account_request: {
+        Args: {
+          p_email: string;
+          p_full_name: string;
+          p_notes?: string | null;
+          p_phone: string;
+        };
+        Returns: string;
       };
       submit_tenant_account_request: {
         Args: {
