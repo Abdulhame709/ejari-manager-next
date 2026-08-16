@@ -211,7 +211,8 @@ function RevenueReport({ month, year }: { month: number; year: number }) {
         .from("invoices")
         .select("total_amount, paid_amount, remaining_amount, payment_status")
         .eq("invoice_month", month)
-        .eq("invoice_year", year);
+        .eq("invoice_year", year)
+        .neq("status", "cancelled");
       const { data: rcps } = await supabase
         .from("receipts")
         .select("amount")
@@ -260,6 +261,7 @@ function UnpaidReport({ month, year }: { month: number; year: number }) {
           "id, invoice_no, total_amount, paid_amount, remaining_amount, invoice_date, shops(shop_code, shop_name), customers(full_name)",
         )
         .in("payment_status", ["unpaid", "partial"])
+        .neq("status", "cancelled")
         .order("remaining_amount", { ascending: false });
       return data ?? [];
     },
@@ -320,7 +322,8 @@ function OccupancyReport() {
         supabase
           .from("invoices")
           .select("id", { count: "exact", head: true })
-          .eq("payment_status", "unpaid"),
+          .eq("payment_status", "unpaid")
+          .neq("status", "cancelled"),
       ]);
       return {
         totalUnits: total ?? 0,
@@ -358,7 +361,8 @@ function CustomersReport() {
       const { data: invs } = await supabase
         .from("invoices")
         .select("customer_id, remaining_amount")
-        .in("payment_status", ["unpaid", "partial"]);
+        .in("payment_status", ["unpaid", "partial"])
+        .neq("status", "cancelled");
       const balanceMap: Record<string, number> = {};
       (invs ?? []).forEach((i: { customer_id: string; remaining_amount: number | null }) => {
         balanceMap[i.customer_id] = (balanceMap[i.customer_id] ?? 0) + (i.remaining_amount || 0);
