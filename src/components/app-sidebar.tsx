@@ -39,6 +39,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/customers", label: "المستأجرون", icon: Users, roles: PAGE_ROLES.customers },
   { to: "/contracts", label: "العقود", icon: FileText, roles: PAGE_ROLES.contracts },
   { to: "/readings", label: "قراءات العدادات", icon: Gauge, roles: PAGE_ROLES.readings },
+  {
+    to: "/meter-types",
+    label: "أنواع العدادات والتسعير",
+    icon: Gauge,
+    roles: PAGE_ROLES.meterTypes,
+  },
   { to: "/invoices", label: "الفواتير", icon: Receipt, roles: PAGE_ROLES.invoices },
   {
     to: "/receipts",

@@ -17,6 +17,7 @@ export const PAGE_ROLES = {
   customers: ["admin", "manager", "data_entry"],
   contracts: ["admin", "manager", "data_entry"],
   readings: ["admin", "manager", "accountant", "data_entry"],
+  meterTypes: ["admin", "manager"],
   invoices: ["admin", "manager", "accountant"],
   receipts: ["admin", "manager", "accountant"],
   reports: ["admin", "manager", "accountant", "viewer"],
@@ -59,6 +60,7 @@ export function canAccessPath(role: AppRole | null, pathname: string): boolean {
   if (normalized.startsWith("/customers")) return hasAnyRole(role, PAGE_ROLES.customers);
   if (normalized.startsWith("/contracts")) return hasAnyRole(role, PAGE_ROLES.contracts);
   if (normalized.startsWith("/readings")) return hasAnyRole(role, PAGE_ROLES.readings);
+  if (normalized.startsWith("/meter-types")) return hasAnyRole(role, PAGE_ROLES.meterTypes);
   if (normalized.startsWith("/invoices")) return hasAnyRole(role, PAGE_ROLES.invoices);
   if (normalized.startsWith("/receipts")) return hasAnyRole(role, PAGE_ROLES.receipts);
   if (normalized.startsWith("/reports")) return hasAnyRole(role, PAGE_ROLES.reports);
