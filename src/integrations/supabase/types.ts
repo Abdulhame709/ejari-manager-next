@@ -950,6 +950,18 @@ export type Database = {
         Args: { p_is_active: boolean; p_user_id: string };
         Returns: undefined;
       };
+      archive_contract: {
+        Args: { p_contract_id: string };
+        Returns: undefined;
+      };
+      archive_customer: {
+        Args: { p_customer_id: string };
+        Returns: undefined;
+      };
+      archive_shop: {
+        Args: { p_shop_id: string };
+        Returns: undefined;
+      };
       record_last_login: {
         Args: Record<string, never>;
         Returns: undefined;

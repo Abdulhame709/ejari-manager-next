@@ -167,16 +167,11 @@ function CustomersList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { count } = await supabase
-        .from("contracts")
-        .select("id", { count: "exact", head: true })
-        .eq("customer_id", id);
-      if ((count ?? 0) > 0) throw new Error("لا يمكن حذف عميل لديه عقود مرتبطة");
-      const { error } = await supabase.from("customers").delete().eq("id", id);
+      const { error } = await supabase.rpc("archive_customer", { p_customer_id: id });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("✅ تم حذف العميل");
+      toast.success("✅ تم أرشفة العميل مع الحفاظ على سجله");
       qc.invalidateQueries({ queryKey: ["customers"] });
       setDeleteTarget(null);
     },
@@ -436,10 +431,10 @@ function CustomersList() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد حذف العميل</AlertDialogTitle>
+            <AlertDialogTitle>تأكيد أرشفة العميل</AlertDialogTitle>
             <AlertDialogDescription>
-              هل تريد حذف العميل <strong>{deleteTarget?.full_name}</strong>؟ لا يمكن التراجع عن هذا
-              الإجراء.
+              هل تريد أرشفة العميل <strong>{deleteTarget?.full_name}</strong>؟ سيبقى تاريخه المالي
+              محفوظاً ولن يظهر ضمن العملاء النشطين.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

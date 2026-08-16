@@ -267,20 +267,11 @@ function ShopsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (shopId: string) => {
-      const { data: invoices } = await supabase.from("invoices").select("id").eq("shop_id", shopId);
-      if (invoices && invoices.length > 0) {
-        const ids = invoices.map((i) => i.id);
-        await supabase.from("receipt_details").delete().in("invoice_id", ids);
-        await supabase.from("invoices").delete().eq("shop_id", shopId);
-      }
-      await supabase.from("unit_images").delete().eq("shop_id", shopId);
-      await supabase.from("meter_readings").delete().eq("shop_id", shopId);
-      await supabase.from("contracts").delete().eq("shop_id", shopId);
-      await supabase.from("additional_charges").delete().eq("shop_id", shopId);
-      await supabase.from("shops").delete().eq("id", shopId);
+      const { error } = await supabase.rpc("archive_shop", { p_shop_id: shopId });
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("✅ تم حذف الوحدة وجميع بياناتها");
+      toast.success("✅ تم أرشفة الوحدة مع الحفاظ على بياناتها");
       qc.invalidateQueries({ queryKey: ["shops"] });
       setSelectedShop(null);
       setDeleteDialog(false);

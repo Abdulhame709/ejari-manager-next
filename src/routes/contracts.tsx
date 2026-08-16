@@ -212,16 +212,11 @@ function ContractsList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { count } = await supabase
-        .from("invoices")
-        .select("id", { count: "exact", head: true })
-        .eq("contract_id", id);
-      if ((count ?? 0) > 0) throw new Error("لا يمكن حذف عقد لديه فواتير");
-      const { error } = await supabase.from("contracts").delete().eq("id", id);
+      const { error } = await supabase.rpc("archive_contract", { p_contract_id: id });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("✅ تم حذف العقد");
+      toast.success("✅ تم أرشفة العقد مع الحفاظ على فواتيره");
       qc.invalidateQueries({ queryKey: ["contracts"] });
       setDeleteTarget(null);
     },
@@ -554,9 +549,10 @@ function ContractsList() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد حذف العقد</AlertDialogTitle>
+            <AlertDialogTitle>تأكيد أرشفة العقد</AlertDialogTitle>
             <AlertDialogDescription>
-              هل تريد حذف العقد رقم <strong>{deleteTarget?.contract_no}</strong>؟
+              هل تريد أرشفة العقد رقم <strong>{deleteTarget?.contract_no}</strong>؟ ستبقى الفواتير
+              المرتبطة محفوظة.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
