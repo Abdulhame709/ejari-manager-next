@@ -825,6 +825,26 @@ export type Database = {
           },
         ];
       };
+      user_permissions: {
+        Row: {
+          user_id: string;
+          permission_key: string;
+          allowed: boolean;
+          granted_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          permission_key: string;
+          allowed?: boolean;
+          granted_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_permissions"]["Insert"]>;
+        Relationships: [];
+      };
       user_roles: {
         Row: {
           created_at: string;
@@ -917,6 +937,14 @@ export type Database = {
           p_phone: string;
         };
         Returns: string;
+      };
+      admin_remove_user_access: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
+      admin_set_user_active: {
+        Args: { p_is_active: boolean; p_user_id: string };
+        Returns: undefined;
       };
       record_last_login: {
         Args: Record<string, never>;

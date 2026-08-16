@@ -225,6 +225,9 @@ function LoginPage() {
         }),
       );
       if (error) throw error;
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        throw new Error("user already registered");
+      }
 
       if (mode === "tenant") {
         const { error: requestError } = await supabase.rpc("submit_tenant_account_request", {
@@ -268,7 +271,7 @@ function LoginPage() {
       setPassword("");
     } catch (error: unknown) {
       const message = getErrorMessage(error);
-      toast.error(isArabic ? arabicAuthError(message) : englishAuthError(message));
+      toast.error(isArabic ? arabicSignupError(message) : englishSignupError(message));
     } finally {
       setSubmitting(false);
     }
@@ -722,7 +725,7 @@ function getErrorMessage(error: unknown): string {
 function englishAuthError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login") || normalized.includes("invalid credentials")) {
-    return "This email is not registered or the credentials are incorrect. Register first, confirm your email, then wait for approval if required.";
+    return "Please verify the email address and password, then try again.";
   }
   if (normalized.includes("already registered") || normalized.includes("user already registered")) {
     return "This account is already registered. Sign in or reset its password.";
@@ -733,7 +736,7 @@ function englishAuthError(message: string): string {
 function arabicAuthError(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("invalid login") || normalized.includes("invalid credentials")) {
-    return "هذا البريد غير مسجل أو بيانات الدخول غير صحيحة. أنشئ حسابًا أولاً، وأكّد بريدك، ثم انتظر موافقة الإدارة إذا كان الحساب موظفاً أو مستأجراً.";
+    return "يرجى التحقق من البريد الإلكتروني أو كلمة السر ثم المحاولة مرة أخرى.";
   }
   if (normalized.includes("already registered") || normalized.includes("user already registered")) {
     return "هذا الحساب مسجل مسبقًا. انتقل إلى تسجيل الدخول أو استخدم استعادة كلمة المرور.";
@@ -743,4 +746,26 @@ function arabicAuthError(message: string): string {
     return "عدد محاولات كثيرة، انتظر قليلاً ثم أعد المحاولة";
   }
   return "تعذر تسجيل الدخول: " + message;
+}
+
+function englishSignupError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("already registered") || normalized.includes("user already registered")) {
+    return "This account is already registered. Please sign in instead.";
+  }
+  if (normalized.includes("invalid email") || normalized.includes("email")) {
+    return "Please verify the email address and try again.";
+  }
+  return englishAuthError(message);
+}
+
+function arabicSignupError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("already registered") || normalized.includes("user already registered")) {
+    return "هذا الحساب مسجل من قبل. يرجى الانتقال إلى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
+  }
+  if (normalized.includes("invalid email") || normalized.includes("email")) {
+    return "يرجى التحقق من صيغة البريد الإلكتروني المدخل ثم المحاولة مرة أخرى.";
+  }
+  return arabicAuthError(message);
 }

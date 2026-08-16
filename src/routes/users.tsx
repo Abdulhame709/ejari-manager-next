@@ -102,6 +102,8 @@ function UsersPage() {
   const { data: users = [], isLoading } = useQuery<UserRow[]>({
     queryKey: ["users", search],
     queryFn: fetchUsers,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
   });
 
   const { data: customers = [] } = useQuery({
