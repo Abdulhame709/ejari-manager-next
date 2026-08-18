@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { Upload, Download, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -67,12 +68,20 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-function downloadTemplate(headers: string[], title: string) {
+function downloadTemplate(headers: string[], title: string, format: "csv" | "xlsx") {
+  const filename = `${title.replace(/\s+/g, "-")}-template`;
+  if (format === "xlsx") {
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Import");
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
+    return;
+  }
   const blob = new Blob(["\uFEFF" + headers.join(",") + "\n"], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${title.replace(/\s+/g, "-")}-template.csv`;
+  anchor.download = `${filename}.csv`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -108,14 +117,24 @@ export function CsvImportDialog<T>({
   }
   async function readFile(file?: File) {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      toast.error("يرجى اختيار ملف CSV فقط في هذه المرحلة");
+    const filename = file.name.toLowerCase();
+    if (!filename.endsWith(".csv") && !filename.endsWith(".xlsx") && !filename.endsWith(".xls")) {
+      toast.error("يرجى اختيار ملف CSV أو Excel بصيغة XLSX");
       return;
     }
     setReading(true);
     try {
-      const text = await file.text();
-      const raw = parseCsv(text);
+      let raw: string[][];
+      if (filename.endsWith(".xlsx") || filename.endsWith(".xls")) {
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        if (!firstSheet) throw new Error("ملف Excel لا يحتوي على ورقة عمل");
+        raw = (
+          XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "", raw: false }) as unknown[][]
+        ).map((line) => line.map((cell) => String(cell ?? "").trim()));
+      } else {
+        raw = parseCsv(await file.text());
+      }
       if (raw.length < 2) throw new Error("الملف يجب أن يحتوي على صف العناوين وصف واحد على الأقل");
       const headerRow = raw[0].map((header) => headerAliases[header.trim()] ?? header.trim());
       const missing = headers.filter((header) => !headerRow.includes(header));
@@ -169,14 +188,22 @@ export function CsvImportDialog<T>({
             <Button
               type="button"
               variant="outline"
-              onClick={() => downloadTemplate(headers, title)}
+              onClick={() => downloadTemplate(headers, title, "csv")}
             >
               <Download className="h-4 w-4 ml-1" />
               تحميل قالب CSV
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => downloadTemplate(headers, title, "xlsx")}
+            >
+              <Download className="h-4 w-4 ml-1" />
+              تحميل قالب Excel
+            </Button>
             <Input
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
               disabled={reading || importing}
               onChange={(event) => void readFile(event.target.files?.[0])}
               className="max-w-sm"
