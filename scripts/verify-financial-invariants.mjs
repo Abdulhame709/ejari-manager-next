@@ -14,6 +14,7 @@ const shopsRoute = read("src/routes/shops/index.tsx");
 const paymentSql = read(
   "supabase/migrations/20260815010000_approve_payment_request_transaction.sql",
 );
+const rpcHardeningSql = read("supabase/migrations/20260818010000_harden_rpc_execute_grants.sql");
 
 assert.match(invoiceSql, /CREATE OR REPLACE FUNCTION public\.generate_monthly_invoices/);
 assert.match(invoiceSql, /pg_advisory_xact_lock/);
@@ -50,6 +51,8 @@ assert.match(paymentSql, /FOR UPDATE/);
 assert.match(paymentSql, /can_manage/);
 assert.match(paymentSql, /REVOKE ALL ON FUNCTION public\.approve_payment_request/);
 assert.match(paymentSql, /audit_log/);
+assert.match(rpcHardeningSql, /REVOKE EXECUTE ON FUNCTION public\.admin_remove_user_access/);
+assert.match(rpcHardeningSql, /GRANT EXECUTE ON FUNCTION public\.submit_staff_account_request/);
 
 console.log(
   "Acceptance guards verified: financial atomicity, safe archives, cancelled-invoice exclusion, meter-type access, auth messages, CSV preview validation, and payment approval controls.",
