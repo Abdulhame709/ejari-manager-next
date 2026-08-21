@@ -68,7 +68,9 @@ const content = {
       "أنشئ طلب حساب موظف. يجب تأكيد البريد الإلكتروني ثم مراجعة الطلب والموافقة عليه من الإدارة.",
     tenantSignupNote: "سيتم إنشاء سجل مستأجر جديد، أو ربط الحساب بسجلك الموجود عند تطابق البريد.",
     visitorSignupNote:
-      "أنشئ حساب زائر بالبريد الإلكتروني، وبعد تأكيده ستدخل مباشرة لاستعراض الوحدات دون صلاحيات داخلية.",
+      "أنشئ حساب زائر بالبريد الإلكتروني. سنرسل رسالة لتأكيد البريد فقط، وبعد التأكيد سجّل الدخول وستنتقل مباشرة لاستعراض الوحدات دون موافقة إدارية أو صلاحيات داخلية.",
+    visitorConfirmEmail:
+      "تم إنشاء حساب الزائر. تحقق من بريدك لتأكيده، ثم سجّل الدخول للدخول مباشرة إلى عرض الوحدات.",
     confirmEmail: "تم إنشاء الحساب. تحقق من بريدك لتأكيده، ثم سجّل الدخول.",
     browse: "تصفح الوحدات كزائر",
     trusted: "منصة إيجارية مصممة لاحتياجات السوق اليمني",
@@ -113,7 +115,9 @@ const content = {
     tenantSignupNote:
       "A tenant record is created, or an existing record is linked when the email matches.",
     visitorSignupNote:
-      "Create a visitor account with your email. After confirmation, you can enter the unit catalogue directly without internal access.",
+      "Create a visitor account with your email. We only require email confirmation; after confirmation, sign in to enter the unit catalogue directly without administrative approval or internal access.",
+    visitorConfirmEmail:
+      "Your visitor account was created. Confirm your email, then sign in to enter the unit catalogue directly.",
     confirmEmail: "Account created. Confirm it from your email, then sign in.",
     browse: "Browse units as a visitor",
     trusted: "A rental platform made for the Yemeni market",
@@ -266,7 +270,7 @@ function LoginPage() {
         return;
       }
 
-      toast.success(t.confirmEmail);
+      toast.success(mode === "visitor" ? t.visitorConfirmEmail : t.confirmEmail);
       setTab("login");
       setPassword("");
     } catch (error: unknown) {
