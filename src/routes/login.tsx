@@ -71,6 +71,12 @@ const content = {
       "أنشئ حساب زائر بالبريد الإلكتروني. سنرسل رسالة لتأكيد البريد فقط، وبعد التأكيد سجّل الدخول وستنتقل مباشرة لاستعراض الوحدات دون موافقة إدارية أو صلاحيات داخلية.",
     visitorConfirmEmail:
       "تم إنشاء حساب الزائر. تحقق من بريدك لتأكيده، ثم سجّل الدخول للدخول مباشرة إلى عرض الوحدات.",
+    verifyEmailTitle: "تأكيد بريد الزائر",
+    verifyEmailNote: "أدخل الرمز المكوّن من 6 أرقام الذي أرسلناه إلى بريدك الإلكتروني.",
+    verifyEmailCode: "رمز التأكيد",
+    verifyEmailButton: "تأكيد البريد والدخول إلى الوحدات",
+    resendCode: "إرسال الرمز مرة أخرى",
+    changeEmail: "تغيير البريد الإلكتروني",
     confirmEmail: "تم إنشاء الحساب. تحقق من بريدك لتأكيده، ثم سجّل الدخول.",
     browse: "تصفح الوحدات كزائر",
     trusted: "منصة إيجارية مصممة لاحتياجات السوق اليمني",
@@ -118,6 +124,12 @@ const content = {
       "Create a visitor account with your email. We only require email confirmation; after confirmation, sign in to enter the unit catalogue directly without administrative approval or internal access.",
     visitorConfirmEmail:
       "Your visitor account was created. Confirm your email, then sign in to enter the unit catalogue directly.",
+    verifyEmailTitle: "Confirm visitor email",
+    verifyEmailNote: "Enter the 6-digit code sent to your email address.",
+    verifyEmailCode: "Confirmation code",
+    verifyEmailButton: "Confirm email and browse units",
+    resendCode: "Resend code",
+    changeEmail: "Change email",
     confirmEmail: "Account created. Confirm it from your email, then sign in.",
     browse: "Browse units as a visitor",
     trusted: "A rental platform made for the Yemeni market",
@@ -148,6 +160,9 @@ function LoginPage() {
   const [phone, setPhone] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [address, setAddress] = useState("");
+  const [emailVerificationMode, setEmailVerificationMode] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationEmail, setVerificationEmail] = useState("");
 
   const isArabic = language === "ar";
   const t = content[language];
@@ -265,17 +280,85 @@ function LoginPage() {
         return;
       }
 
+      if (mode === "visitor") {
+        if (data.session) {
+          toast.success(
+            isArabic ? "تم تأكيد البريد وتسجيل الدخول" : "Email confirmed and signed in",
+          );
+          await navigate({ to: "/units", replace: true });
+          return;
+        }
+        setVerificationEmail(email.trim());
+        setVerificationCode("");
+        setEmailVerificationMode(true);
+        return;
+      }
+
       if (data.session) {
         toast.success(isArabic ? "تم إنشاء الحساب وتسجيل الدخول" : "Account created and signed in");
         return;
       }
 
-      toast.success(mode === "visitor" ? t.visitorConfirmEmail : t.confirmEmail);
+      toast.success(t.confirmEmail);
       setTab("login");
       setPassword("");
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       toast.error(isArabic ? arabicSignupError(message) : englishSignupError(message));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleVerifyVisitorEmail(event: React.FormEvent) {
+    event.preventDefault();
+    if (submitting) return;
+    const token = verificationCode.replace(/\D/g, "").slice(0, 6);
+    if (token.length !== 6) {
+      toast.error(
+        isArabic ? "أدخل رمز التأكيد المكوّن من 6 أرقام" : "Enter the 6-digit confirmation code",
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await withAuthTimeout(
+        supabase.auth.verifyOtp({
+          email: verificationEmail,
+          token,
+          type: "signup",
+        }),
+      );
+      if (error) throw error;
+      toast.success(
+        isArabic ? "تم تأكيد البريد، جارٍ فتح الوحدات" : "Email confirmed, opening units",
+      );
+      await navigate({ to: "/units", replace: true });
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      toast.error(
+        isArabic
+          ? `تعذر تأكيد الرمز: ${message || "تحقق من الرمز وحاول مرة أخرى."}`
+          : `Could not confirm the code: ${message || "Check the code and try again."}`,
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResendVisitorCode() {
+    if (submitting || !verificationEmail) return;
+    setSubmitting(true);
+    try {
+      const { error } = await withAuthTimeout(
+        supabase.auth.resend({ type: "signup", email: verificationEmail }),
+      );
+      if (error) throw error;
+      toast.success(isArabic ? "تم إرسال رمز جديد إلى بريدك" : "A new code was sent to your email");
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      toast.error(isArabic ? arabicAuthError(message) : englishAuthError(message));
     } finally {
       setSubmitting(false);
     }
@@ -320,7 +403,23 @@ function LoginPage() {
               </button>
             </div>
 
-            {user && !loading && !role ? (
+            {emailVerificationMode ? (
+              <EmailVerificationCard
+                email={verificationEmail}
+                code={verificationCode}
+                setCode={setVerificationCode}
+                submitting={submitting}
+                onSubmit={handleVerifyVisitorEmail}
+                onResend={() => void handleResendVisitorCode()}
+                onChangeEmail={() => {
+                  setEmailVerificationMode(false);
+                  setVerificationCode("");
+                  setTab("signup");
+                  setMode("visitor");
+                }}
+                language={language}
+              />
+            ) : user && !loading && !role ? (
               <div className="rounded-2xl border border-rose-200 bg-white p-7 text-center shadow-[0_12px_38px_rgba(15,43,83,.08)]">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
                   <ShieldAlert className="h-7 w-7 text-rose-600" />
@@ -630,6 +729,88 @@ function BrandPanel({ trusted }: { trusted: string }) {
         <CheckCircle2 className="h-4 w-4 text-emerald-300" /> {trusted}
       </div>
     </section>
+  );
+}
+
+interface EmailVerificationCardProps {
+  email: string;
+  code: string;
+  setCode: (code: string) => void;
+  submitting: boolean;
+  onSubmit: (event: React.FormEvent) => Promise<void>;
+  onResend: () => void;
+  onChangeEmail: () => void;
+  language: Language;
+}
+
+function EmailVerificationCard({
+  email,
+  code,
+  setCode,
+  submitting,
+  onSubmit,
+  onResend,
+  onChangeEmail,
+  language,
+}: EmailVerificationCardProps) {
+  const t = content[language];
+  return (
+    <>
+      <div className="mb-7 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+          <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+        </div>
+        <h1 className="mt-5 text-2xl font-extrabold text-slate-900">{t.verifyEmailTitle}</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500">{t.verifyEmailNote}</p>
+        <p className="mt-2 break-all text-sm font-bold text-blue-700" dir="ltr">
+          {email}
+        </p>
+      </div>
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_38px_rgba(15,43,83,.08)] sm:p-7"
+      >
+        <label className="block">
+          <span className="mb-2 block text-sm font-bold text-slate-700">{t.verifyEmailCode}</span>
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            dir="ltr"
+            maxLength={6}
+            placeholder="000000"
+            className="h-14 w-full rounded-xl border border-slate-200 bg-white px-3 text-center text-2xl font-extrabold tracking-[0.45em] outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+            required
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t.verifyEmailButton}
+        </button>
+        <div className="flex items-center justify-between gap-3 text-xs font-bold">
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={submitting}
+            className="text-blue-600 hover:text-blue-800 disabled:opacity-50"
+          >
+            {t.resendCode}
+          </button>
+          <button
+            type="button"
+            onClick={onChangeEmail}
+            disabled={submitting}
+            className="text-slate-500 hover:text-slate-800 disabled:opacity-50"
+          >
+            {t.changeEmail}
+          </button>
+        </div>
+      </form>
+    </>
   );
 }
 
