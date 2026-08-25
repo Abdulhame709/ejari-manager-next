@@ -10,6 +10,7 @@ import {
   PrintInfo,
   PrintInfoGrid,
   PrintMoney,
+  PrintNotice,
   PrintPageShell,
   PrintSignatures,
   type PrintSettings,
@@ -227,6 +228,20 @@ function ReceiptPrintPage() {
           </div>
         )}
       </section>
+
+      {isReversal ? (
+        <PrintNotice title="تنبيه محاسبي" tone="rose">
+          هذا سند عكسي مرتبط بسند قبض سابق. يحتفظ النظام بالسندين لأغراض المراجعة ولا يعد هذا المستند إقراراً بقبض مبلغ جديد.
+        </PrintNotice>
+      ) : receipt.status === "cancelled" ? (
+        <PrintNotice title="سند ملغي" tone="rose">
+          هذا السند ملغي ولا يثبت قبضاً قائماً. يرجى الرجوع إلى السند العكسي أو سجل العمليات المحاسبي عند الحاجة.
+        </PrintNotice>
+      ) : (
+        <PrintNotice title="إقرار استلام" tone="emerald">
+          يثبت هذا السند استلام المبلغ الموضح أعلاه وتوزيعه على الفواتير المدرجة، وفق حالة السند المسجلة في نظام إيجاري.
+        </PrintNotice>
+      )}
 
       {receipt.notes && (
         <section className="mt-7 rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm">

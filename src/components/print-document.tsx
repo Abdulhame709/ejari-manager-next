@@ -162,6 +162,29 @@ export function formatPrintMoney(
   return `${formatted} ${settings.currency_symbol || settings.currency || "ر.ي"}`;
 }
 
+export function PrintNotice({
+  title,
+  children,
+  tone = "amber",
+}: {
+  title: string;
+  children: ReactNode;
+  tone?: "amber" | "emerald" | "rose";
+}) {
+  const toneClasses = {
+    amber: "border-amber-300 bg-amber-50 text-amber-950",
+    emerald: "border-emerald-300 bg-emerald-50 text-emerald-950",
+    rose: "border-rose-300 bg-rose-50 text-rose-950",
+  };
+
+  return (
+    <section className={`mt-7 rounded-xl border p-4 text-sm leading-7 ${toneClasses[tone]}`}>
+      <h2 className="font-black">{title}</h2>
+      <div className="mt-1">{children}</div>
+    </section>
+  );
+}
+
 export function PrintSignatures({
   rightLabel,
   leftLabel,

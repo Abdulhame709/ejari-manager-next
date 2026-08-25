@@ -10,6 +10,7 @@ import {
   PrintInfo,
   PrintInfoGrid,
   PrintMoney,
+  PrintNotice,
   PrintPageShell,
   PrintSignatures,
   type PrintSettings,
@@ -278,6 +279,17 @@ function InvoicePrintPage() {
           strong
         />
       </section>
+
+      {invoice.remaining_amount > 0.01 ? (
+        <PrintNotice title="تنبيه استحقاق" tone="amber">
+          يرجى سداد الرصيد المتبقي وقدره <PrintMoney value={invoice.remaining_amount} settings={settings} /> في أقرب وقت ممكن
+          {invoice.due_date ? `، وموعد الاستحقاق هو ${formatDate(invoice.due_date)}.` : "."}
+        </PrintNotice>
+      ) : (
+        <PrintNotice title="حالة السداد" tone="emerald">
+          تم سداد هذه الفاتورة بالكامل وفق الرصيد المسجل في النظام.
+        </PrintNotice>
+      )}
 
       {invoice.notes && (
         <section className="mt-7 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
