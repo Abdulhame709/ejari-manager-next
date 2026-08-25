@@ -171,7 +171,7 @@ function ReceiptsPage() {
     mutationFn: async ({ receiptId, reason }: { receiptId: string; reason: string }) => {
       const { error } = await supabase.rpc("reverse_receipt", {
         p_receipt_id: receiptId,
-        p_reason: reason.trim() || null,
+        p_reason: reason.trim() || undefined,
       });
       if (error) throw error;
     },

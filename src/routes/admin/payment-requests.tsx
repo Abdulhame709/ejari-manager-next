@@ -70,7 +70,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function AdminPaymentRequests() {
-  const [statusFilter, setStatusFilter] = useState("pending_review");
+  const [statusFilter, setStatusFilter] = useState<"all" | PaymentRequest["status"]>("pending_review");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [viewId, setViewId] = useState<PaymentRequest | null>(null);
@@ -125,7 +125,7 @@ function AdminPaymentRequests() {
       if (!rejectOpen) return;
       const { error } = await supabase.rpc("reject_payment_request", {
         p_payment_request_id: rejectOpen.id,
-        p_rejection_reason: reason.trim() || null,
+        p_rejection_reason: reason.trim() || undefined,
       });
       if (error) throw error;
     },
@@ -165,7 +165,7 @@ function AdminPaymentRequests() {
             </div>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | PaymentRequest["status"])}
               className="h-9 rounded-md border bg-background px-3 text-sm"
             >
               <option value="all">جميع الحالات</option>

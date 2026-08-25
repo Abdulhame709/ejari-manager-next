@@ -88,7 +88,7 @@ export function AccountRequestsPanel() {
         requestType === "staff" ? "reject_account_request" : "reject_tenant_account_request",
         {
           p_request_id: requestId,
-          p_rejection_reason: rejectionReason.trim() || null,
+          p_rejection_reason: rejectionReason.trim() || undefined,
         },
       );
       if (error) throw error;

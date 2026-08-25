@@ -259,7 +259,7 @@ function ContractsList() {
         p_monthly_rent: Number(renewalForm.monthly_rent) || 0,
         p_holiday_increase: Number(renewalForm.holiday_increase) || 0,
         p_insurance_amount: Number(renewalForm.insurance_amount) || 0,
-        p_notes: renewalForm.notes.trim() || null,
+        p_notes: renewalForm.notes.trim() || undefined,
       });
       if (error) throw error;
     },

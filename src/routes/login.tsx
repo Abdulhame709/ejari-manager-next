@@ -253,9 +253,9 @@ function LoginPage() {
           p_email: email.trim(),
           p_full_name: fullName.trim(),
           p_phone: phone.trim(),
-          p_id_number: idNumber.trim() || null,
-          p_address: address.trim() || null,
-          p_notes: null,
+          p_id_number: idNumber.trim() || undefined,
+          p_address: address.trim() || undefined,
+          p_notes: undefined,
         });
         if (requestError) throw requestError;
         toast.success(t.requestSubmitted);
@@ -270,7 +270,7 @@ function LoginPage() {
           p_email: email.trim(),
           p_full_name: fullName.trim() || email.trim(),
           p_phone: phone.trim(),
-          p_notes: null,
+          p_notes: undefined,
         });
         if (requestError) throw requestError;
         toast.success(t.requestSubmitted);
