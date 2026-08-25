@@ -227,7 +227,7 @@ function CustomersList() {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4 ml-2" />
-            استيراد CSV
+            استيراد CSV / Excel
           </Button>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 ml-2" />
@@ -369,18 +369,33 @@ function CustomersList() {
         open={importOpen}
         onOpenChange={setImportOpen}
         title="استيراد العملاء"
-        description="استخدم القالب، راجع المعاينة، ثم أكد الإدراج. العملية دفعة واحدة؛ إذا فشل أي صف فلن يتم اعتماد الملف."
+        description="استخدم القالب، راجع المعاينة، ثم أكد الإدراج. يدعم CSV وExcel ويمنع تكرار الجوال أو الهوية أو البريد داخل الملف أو في قاعدة البيانات."
         headers={["full_name", "phone", "email", "id_number", "address"]}
+        headerAliases={{
+          "الاسم": "full_name",
+          "الاسم الكامل": "full_name",
+          "رقم الجوال": "phone",
+          "الجوال": "phone",
+          "الهاتف": "phone",
+          "البريد الإلكتروني": "email",
+          "البريد الالكتروني": "email",
+          "رقم الهوية": "id_number",
+          "الهوية": "id_number",
+          "العنوان": "address",
+        }}
         previewColumns={["full_name", "phone", "email", "id_number"]}
         parseRow={(row, rowNumber) => {
           const fullName = row.full_name?.trim();
           const phone = row.phone?.trim();
+          const email = row.email?.trim().toLowerCase() || null;
           if (!fullName || !phone) return { error: `السطر ${rowNumber}: الاسم والجوال مطلوبان` };
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+            return { error: `السطر ${rowNumber}: البريد الإلكتروني غير صحيح` };
           return {
             value: {
               full_name: fullName,
               phone,
-              email: row.email?.trim() || null,
+              email,
               id_number: row.id_number?.trim() || null,
               address: row.address?.trim() || null,
               is_active: true,
@@ -388,9 +403,36 @@ function CustomersList() {
           };
         }}
         onImport={async (rows) => {
-          const phones = rows.map((row) => row.phone);
-          if (new Set(phones).size !== phones.length)
-            throw new Error("يوجد رقم جوال مكرر داخل الملف");
+          const duplicateInFile = (values: string[]) =>
+            [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
+          const phones = rows.map((row) => row.phone.trim());
+          const idNumbers = rows.map((row) => row.id_number?.trim()).filter((value): value is string => !!value);
+          const emails = rows.map((row) => row.email?.trim().toLowerCase()).filter((value): value is string => !!value);
+          const duplicatePhone = duplicateInFile(phones);
+          const duplicateIdNumber = duplicateInFile(idNumbers);
+          const duplicateEmail = duplicateInFile(emails);
+          if (duplicatePhone.length) throw new Error(`رقم جوال مكرر داخل الملف: ${duplicatePhone[0]}`);
+          if (duplicateIdNumber.length) throw new Error(`رقم هوية مكرر داخل الملف: ${duplicateIdNumber[0]}`);
+          if (duplicateEmail.length) throw new Error(`بريد إلكتروني مكرر داخل الملف: ${duplicateEmail[0]}`);
+
+          const [phonesResult, idsResult, emailsResult] = await Promise.all([
+            supabase.from("customers").select("id, phone").in("phone", phones),
+            idNumbers.length
+              ? supabase.from("customers").select("id, id_number").in("id_number", idNumbers)
+              : Promise.resolve({ data: [], error: null }),
+            emails.length
+              ? supabase.from("customers").select("id, email").in("email", emails)
+              : Promise.resolve({ data: [], error: null }),
+          ]);
+          if (phonesResult.error || idsResult.error || emailsResult.error)
+            throw new Error("تعذر التحقق من تكرار بيانات العملاء");
+          if ((phonesResult.data?.length ?? 0) > 0)
+            throw new Error(`رقم الجوال مستخدم مسبقاً: ${phonesResult.data?.[0]?.phone}`);
+          if ((idsResult.data?.length ?? 0) > 0)
+            throw new Error(`رقم الهوية مستخدم مسبقاً: ${idsResult.data?.[0]?.id_number}`);
+          if ((emailsResult.data?.length ?? 0) > 0)
+            throw new Error(`البريد الإلكتروني مستخدم مسبقاً: ${emailsResult.data?.[0]?.email}`);
+
           const { error } = await supabase.from("customers").insert(rows);
           if (error) throw error;
           await qc.invalidateQueries({ queryKey: ["customers"] });
