@@ -129,6 +129,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   transfer: "تحويل بنكي",
   deposit: "إيداع",
   wallet: "محفظة إلكترونية",
+  cheque: "شيك",
 };
 const REPORT_TYPES = [
   { id: "revenue", label: "الإيرادات الشهرية", icon: TrendingUp },
@@ -146,6 +147,25 @@ function ReportsPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [customerId, setCustomerId] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (reportId === "account_statement" && !customerId) {
+      toast.error("اختر المستأجر أولاً لتصدير كشف الحساب");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const fileName = await exportReportCSV({ reportId, month, year, customerId });
+      toast.success(`تم تصدير التقرير: ${fileName}`);
+    } catch (error) {
+      console.error("Report CSV export failed", error);
+      toast.error(error instanceof Error ? error.message : "تعذر تصدير التقرير");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { data: statementCustomers = [] } = useQuery({
     queryKey: ["report-statement-customers"],
@@ -246,8 +266,12 @@ function ReportsPage() {
               <Printer className="h-4 w-4 ml-1" />
               طباعة
             </Button>
-            <Button size="sm" onClick={() => exportCSV(reportId, month, year)}>
-              <Download className="h-4 w-4 ml-1" />
+            <Button
+              size="sm"
+              onClick={() => void handleExport()}
+              disabled={isExporting || (reportId === "account_statement" && !customerId)}
+            >
+              {isExporting ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <Download className="h-4 w-4 ml-1" />}
               تصدير CSV
             </Button>
           </div>
@@ -287,6 +311,7 @@ function RevenueReport({ month, year }: { month: number; year: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ["report-revenue", month, year],
     queryFn: async () => {
+      const { start, endExclusive } = getMonthDateRange(year, month);
       const { data: invs } = await supabase
         .from("invoices")
         .select("total_amount, paid_amount, remaining_amount, payment_status")
@@ -296,8 +321,8 @@ function RevenueReport({ month, year }: { month: number; year: number }) {
       const { data: rcps } = await supabase
         .from("receipts")
         .select("amount")
-        .gte("receipt_date", `${year}-${String(month).padStart(2, "0")}-01`)
-        .lte("receipt_date", `${year}-${String(month).padStart(2, "0")}-31`)
+        .gte("receipt_date", start)
+        .lt("receipt_date", endExclusive)
         .eq("is_active", true)
         .eq("status", "posted");
       const total = (invs ?? []).reduce((s, i) => s + (i.total_amount || 0), 0);
@@ -776,28 +801,363 @@ function Loader() {
   );
 }
 
-function exportCSV(reportId: string, month: number, year: number) {
-  const table = document.querySelector("main table") as HTMLTableElement | null;
-  if (!table) {
-    toast.error("لا يوجد جدول قابل للتصدير لهذا التقرير");
-    return;
-  }
+type CsvValue = string | number | null | undefined;
+type CsvRows = CsvValue[][];
 
-  const rows = Array.from(table.rows).map((row) =>
-    Array.from(row.cells).map((cell) => {
-      const value = (cell.textContent ?? "").replace(/\s+/g, " ").trim();
-      return `"${value.replace(/"/g, '""')}"`;
-    }),
-  );
-  const csv = "\uFEFF" + rows.map((row) => row.join(",")).join("\n");
+type ReportExportParams = {
+  reportId: string;
+  month: number;
+  year: number;
+  customerId: string;
+};
+
+function getMonthDateRange(year: number, month: number) {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextMonth = new Date(Date.UTC(year, month, 1));
+  return {
+    start,
+    endExclusive: nextMonth.toISOString().slice(0, 10),
+  };
+}
+
+function csvValue(value: CsvValue) {
+  const normalized = String(value ?? "").replace(/\r?\n/g, " ").trim();
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(fileName: string, rows: CsvRows) {
+  const csv = "\uFEFF" + rows.map((row) => row.map(csvValue).join(",")).join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `ejari-${reportId}-${year}-${String(month).padStart(2, "0")}.csv`;
+  anchor.download = fileName;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
-  toast.success("✅ تم تصدير التقرير بصيغة CSV");
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function assertQuerySuccess(error: { message: string } | null, fallbackMessage: string) {
+  if (error) throw new Error(`${fallbackMessage}: ${error.message}`);
+}
+
+function monthlyFileName(reportId: string, year: number, month: number) {
+  return `ejari-${reportId}-${year}-${String(month).padStart(2, "0")}.csv`;
+}
+
+function summaryRows(reportTitle: string, subtitle: string): CsvRows {
+  return [
+    ["نظام إيجاري EJARI"],
+    ["التقرير", reportTitle],
+    ["الفترة", subtitle],
+    ["تاريخ التصدير", format(new Date(), "yyyy/MM/dd HH:mm")],
+    [],
+  ];
+}
+
+async function exportReportCSV({ reportId, month, year, customerId }: ReportExportParams) {
+  const monthLabel = `${ARABIC_MONTHS[month - 1]} ${year}`;
+
+  if (reportId === "revenue") {
+    const { start, endExclusive } = getMonthDateRange(year, month);
+    const [invoicesResult, receiptsResult] = await Promise.all([
+      supabase
+        .from("invoices")
+        .select("invoice_no, invoice_date, total_amount, paid_amount, remaining_amount, payment_status")
+        .eq("invoice_month", month)
+        .eq("invoice_year", year)
+        .neq("status", "cancelled")
+        .order("invoice_date"),
+      supabase
+        .from("receipts")
+        .select("receipt_no, receipt_date, amount, payment_method")
+        .gte("receipt_date", start)
+        .lt("receipt_date", endExclusive)
+        .eq("is_active", true)
+        .eq("status", "posted")
+        .order("receipt_date"),
+    ]);
+    assertQuerySuccess(invoicesResult.error, "تعذر قراءة الفواتير");
+    assertQuerySuccess(receiptsResult.error, "تعذر قراءة سندات القبض");
+
+    const invoices = invoicesResult.data ?? [];
+    const receipts = receiptsResult.data ?? [];
+    const total = invoices.reduce((sum, invoice) => sum + Number(invoice.total_amount || 0), 0);
+    const unpaid = invoices.reduce((sum, invoice) => sum + Number(invoice.remaining_amount || 0), 0);
+    const receiptTotal = receipts.reduce((sum, receipt) => sum + Number(receipt.amount || 0), 0);
+    const rows: CsvRows = [
+      ...summaryRows("تقرير الإيرادات الشهرية", monthLabel),
+      ["المؤشر", "القيمة"],
+      ["إجمالي الفواتير", formatMoney(total)],
+      ["المحصل وفق أرصدة الفواتير", formatMoney(total - unpaid)],
+      ["المدفوعات الفعلية (سندات مرحّلة)", formatMoney(receiptTotal)],
+      ["المتبقي", formatMoney(unpaid)],
+      ["عدد الفواتير", invoices.length],
+      [],
+      ["تفاصيل الفواتير"],
+      ["رقم الفاتورة", "تاريخ الفاتورة", "الإجمالي", "المدفوع", "المتبقي", "حالة السداد"],
+      ...invoices.map((invoice) => [
+        invoice.invoice_no,
+        invoice.invoice_date,
+        formatMoney(invoice.total_amount),
+        formatMoney(invoice.paid_amount),
+        formatMoney(invoice.remaining_amount),
+        invoice.payment_status,
+      ]),
+      [],
+      ["سندات القبض المرحلة خلال الفترة"],
+      ["رقم السند", "تاريخ السند", "طريقة الدفع", "المبلغ"],
+      ...receipts.map((receipt) => [
+        receipt.receipt_no,
+        receipt.receipt_date,
+        PAYMENT_METHOD_LABELS[receipt.payment_method] ?? receipt.payment_method,
+        formatMoney(receipt.amount),
+      ]),
+    ];
+    const fileName = monthlyFileName(reportId, year, month);
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  if (reportId === "unpaid") {
+    const result = await supabase
+      .from("invoices")
+      .select(
+        "invoice_no, total_amount, paid_amount, remaining_amount, invoice_date, payment_status, shops(shop_code, shop_name), customers(full_name)",
+      )
+      .in("payment_status", ["unpaid", "partial"])
+      .neq("status", "cancelled")
+      .order("remaining_amount", { ascending: false });
+    assertQuerySuccess(result.error, "تعذر قراءة الفواتير غير المسددة");
+    const invoices = (result.data ?? []) as unknown as UnpaidInvoiceRow[];
+    const remainingTotal = invoices.reduce((sum, invoice) => sum + Number(invoice.remaining_amount || 0), 0);
+    const rows: CsvRows = [
+      ...summaryRows("الفواتير غير المسددة", `حتى ${format(new Date(), "yyyy/MM/dd")}`),
+      ["إجمالي المتبقي", formatMoney(remainingTotal)],
+      ["عدد الفواتير", invoices.length],
+      [],
+      ["رقم الفاتورة", "المستأجر", "الوحدة", "التاريخ", "الإجمالي", "المدفوع", "المتبقي", "حالة السداد"],
+      ...invoices.map((invoice) => [
+        invoice.invoice_no,
+        invoice.customers?.full_name ?? "",
+        invoice.shops ? `${invoice.shops.shop_code} — ${invoice.shops.shop_name}` : "",
+        invoice.invoice_date,
+        formatMoney(invoice.total_amount),
+        formatMoney(invoice.paid_amount),
+        formatMoney(invoice.remaining_amount),
+        invoice.remaining_amount && Number(invoice.paid_amount || 0) > 0 ? "جزئي" : "غير مسدد",
+      ]),
+    ];
+    const fileName = `ejari-unpaid-${format(new Date(), "yyyyMMdd")}.csv`;
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  if (reportId === "occupancy") {
+    const [unitsResult, contractsResult] = await Promise.all([
+      supabase.from("shops").select("id", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "active"),
+    ]);
+    assertQuerySuccess(unitsResult.error, "تعذر قراءة الوحدات");
+    assertQuerySuccess(contractsResult.error, "تعذر قراءة العقود");
+    const totalUnits = unitsResult.count ?? 0;
+    const rentedUnits = contractsResult.count ?? 0;
+    const availableUnits = Math.max(0, totalUnits - rentedUnits);
+    const occupancyRate = totalUnits ? Math.round((rentedUnits / totalUnits) * 100) : 0;
+    const rows: CsvRows = [
+      ...summaryRows("تقرير الإشغال والحالة العامة", `لقطة حتى ${format(new Date(), "yyyy/MM/dd")}`),
+      ["المؤشر", "القيمة"],
+      ["إجمالي الوحدات النشطة", totalUnits],
+      ["الوحدات المؤجرة بعقود نشطة", rentedUnits],
+      ["الوحدات المتاحة", availableUnits],
+      ["نسبة الإشغال", `${occupancyRate}%`],
+    ];
+    const fileName = `ejari-occupancy-${format(new Date(), "yyyyMMdd")}.csv`;
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  if (reportId === "customers") {
+    const [customersResult, invoicesResult] = await Promise.all([
+      supabase.from("customers").select("id, full_name, phone, is_active").eq("is_active", true).order("full_name"),
+      supabase
+        .from("invoices")
+        .select("customer_id, remaining_amount")
+        .in("payment_status", ["unpaid", "partial"])
+        .neq("status", "cancelled"),
+    ]);
+    assertQuerySuccess(customersResult.error, "تعذر قراءة العملاء");
+    assertQuerySuccess(invoicesResult.error, "تعذر قراءة أرصدة العملاء");
+    const balanceMap: Record<string, number> = {};
+    (invoicesResult.data ?? []).forEach((invoice) => {
+      balanceMap[invoice.customer_id] = (balanceMap[invoice.customer_id] ?? 0) + Number(invoice.remaining_amount || 0);
+    });
+    const customers = customersResult.data ?? [];
+    const totalBalance = customers.reduce((sum, customer) => sum + (balanceMap[customer.id] ?? 0), 0);
+    const rows: CsvRows = [
+      ...summaryRows("قائمة العملاء والأرصدة", `حتى ${format(new Date(), "yyyy/MM/dd")}`),
+      ["عدد العملاء النشطين", customers.length],
+      ["إجمالي الرصيد المستحق", formatMoney(totalBalance)],
+      [],
+      ["الاسم", "الهاتف", "الحالة", "الرصيد المستحق"],
+      ...customers.map((customer) => [
+        customer.full_name,
+        customer.phone,
+        customer.is_active ? "نشط" : "معطل",
+        formatMoney(balanceMap[customer.id] ?? 0),
+      ]),
+    ];
+    const fileName = `ejari-customers-${format(new Date(), "yyyyMMdd")}.csv`;
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  if (reportId === "account_statement") {
+    if (!customerId) throw new Error("اختر المستأجر أولاً لتصدير كشف الحساب");
+    const [customerResult, invoicesResult, receiptsResult] = await Promise.all([
+      supabase.from("customers").select("id, full_name, phone").eq("id", customerId).single(),
+      supabase
+        .from("invoices")
+        .select("id, invoice_no, invoice_date, total_amount, shops(shop_code, shop_name)")
+        .eq("customer_id", customerId)
+        .neq("status", "cancelled"),
+      supabase
+        .from("receipts")
+        .select("id, receipt_no, receipt_date, amount, payment_method")
+        .eq("customer_id", customerId)
+        .eq("status", "posted")
+        .eq("is_active", true),
+    ]);
+    assertQuerySuccess(customerResult.error, "تعذر قراءة بيانات المستأجر");
+    assertQuerySuccess(invoicesResult.error, "تعذر قراءة فواتير المستأجر");
+    assertQuerySuccess(receiptsResult.error, "تعذر قراءة سندات قبض المستأجر");
+
+    const invoices = (invoicesResult.data ?? []) as unknown as StatementInvoiceRow[];
+    const receipts = (receiptsResult.data ?? []) as unknown as StatementReceiptRow[];
+    const entries = [
+      ...invoices.map((invoice) => ({
+        id: invoice.id,
+        date: invoice.invoice_date,
+        type: "invoice" as const,
+        reference: invoice.invoice_no,
+        description: invoice.shops
+          ? `فاتورة الوحدة ${invoice.shops.shop_code} — ${invoice.shops.shop_name}`
+          : "فاتورة إيجار وخدمات",
+        debit: Number(invoice.total_amount || 0),
+        credit: 0,
+      })),
+      ...receipts.map((receipt) => ({
+        id: receipt.id,
+        date: receipt.receipt_date,
+        type: "receipt" as const,
+        reference: receipt.receipt_no,
+        description: `سند قبض — ${PAYMENT_METHOD_LABELS[receipt.payment_method] ?? receipt.payment_method}`,
+        debit: 0,
+        credit: Number(receipt.amount || 0),
+      })),
+    ]
+      .sort((first, second) => first.date.localeCompare(second.date) || first.reference.localeCompare(second.reference))
+      .map((entry) => ({ ...entry, balance: 0 }));
+    let balance = 0;
+    entries.forEach((entry) => {
+      balance += entry.debit - entry.credit;
+      entry.balance = balance;
+    });
+    const debitTotal = entries.reduce((sum, entry) => sum + entry.debit, 0);
+    const creditTotal = entries.reduce((sum, entry) => sum + entry.credit, 0);
+    const customer = customerResult.data;
+    if (!customer) throw new Error("تعذر العثور على بيانات المستأجر");
+    const rows: CsvRows = [
+      ...summaryRows("كشف حساب مستأجر", `${customer.full_name}${customer.phone ? ` — ${customer.phone}` : ""}`),
+      ["إجمالي الفواتير", formatMoney(debitTotal)],
+      ["إجمالي المقبوضات المرحلة", formatMoney(creditTotal)],
+      ["الرصيد المستحق", formatMoney(balance)],
+      [],
+      ["التاريخ", "النوع", "المرجع", "البيان", "مدين", "دائن", "الرصيد"],
+      ...entries.map((entry) => [
+        entry.date,
+        entry.type === "invoice" ? "فاتورة" : "سند قبض",
+        entry.reference,
+        entry.description,
+        entry.debit ? formatMoney(entry.debit) : "",
+        entry.credit ? formatMoney(entry.credit) : "",
+        formatMoney(entry.balance),
+      ]),
+    ];
+    const fileName = `ejari-statement-${customer.id.slice(0, 8)}-${format(new Date(), "yyyyMMdd")}.csv`;
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  if (reportId === "contracts_expiring") {
+    const in90 = new Date();
+    in90.setDate(in90.getDate() + 90);
+    const today = new Date().toISOString().slice(0, 10);
+    const result = await supabase
+      .from("contracts")
+      .select("contract_no, end_date, monthly_rent, shops(shop_code, shop_name), customers(full_name)")
+      .eq("status", "active")
+      .lte("end_date", in90.toISOString().slice(0, 10))
+      .gte("end_date", today)
+      .order("end_date");
+    assertQuerySuccess(result.error, "تعذر قراءة العقود القريبة من الانتهاء");
+    const contracts = (result.data ?? []) as unknown as ExpiringContractRow[];
+    const rows: CsvRows = [
+      ...summaryRows("العقود قاربت الانتهاء", "خلال 90 يوماً"),
+      ["عدد العقود", contracts.length],
+      [],
+      ["رقم العقد", "المستأجر", "الوحدة", "تاريخ الانتهاء", "الأيام المتبقية", "الإيجار الشهري"],
+      ...contracts.map((contract) => {
+        const days = Math.ceil((new Date(contract.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return [
+          contract.contract_no,
+          contract.customers?.full_name ?? "",
+          contract.shops ? `${contract.shops.shop_code} — ${contract.shops.shop_name}` : "",
+          contract.end_date,
+          days,
+          formatMoney(contract.monthly_rent),
+        ];
+      }),
+    ];
+    const fileName = `ejari-contracts-expiring-${format(new Date(), "yyyyMMdd")}.csv`;
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  if (reportId === "readings") {
+    const result = await supabase
+      .from("meter_readings")
+      .select(
+        "elec_consumption, water_consumption, elec_current_reading, elec_previous_reading, water_current_reading, water_previous_reading, shops(shop_code, shop_name)",
+      )
+      .eq("reading_month", month)
+      .eq("reading_year", year);
+    assertQuerySuccess(result.error, "تعذر قراءة بيانات العدادات");
+    const readings = (result.data ?? []) as unknown as ConsumptionReadingRow[];
+    const totalElec = readings.reduce((sum, reading) => sum + Number(reading.elec_consumption || 0), 0);
+    const totalWater = readings.reduce((sum, reading) => sum + Number(reading.water_consumption || 0), 0);
+    const rows: CsvRows = [
+      ...summaryRows("استهلاك العدادات", monthLabel),
+      ["عدد القراءات", readings.length],
+      ["إجمالي استهلاك الكهرباء", totalElec],
+      ["إجمالي استهلاك المياه", totalWater],
+      [],
+      ["الوحدة", "كهرباء سابقة", "كهرباء حالية", "استهلاك الكهرباء", "ماء سابق", "ماء حالي", "استهلاك المياه"],
+      ...readings.map((reading) => [
+        reading.shops ? `${reading.shops.shop_code} — ${reading.shops.shop_name}` : "",
+        reading.elec_previous_reading,
+        reading.elec_current_reading,
+        reading.elec_consumption,
+        reading.water_previous_reading,
+        reading.water_current_reading,
+        reading.water_consumption,
+      ]),
+    ];
+    const fileName = monthlyFileName(reportId, year, month);
+    downloadCsv(fileName, rows);
+    return fileName;
+  }
+
+  throw new Error("نوع التقرير غير مدعوم للتصدير");
 }
