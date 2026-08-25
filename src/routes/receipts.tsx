@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/app-layout";
 import { RouteGuard } from "@/components/route-guard";
-import { PAGE_ROLES } from "@/lib/access-control";
+import { canDeleteOperationalRecords, PAGE_ROLES } from "@/lib/access-control";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -32,7 +43,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Printer,
-  Trash2,
+  RotateCcw,
   Eye,
   CheckCircle2,
   Calendar,
@@ -122,8 +133,12 @@ function ReceiptsPage() {
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState<Receipt | null>(null);
+  const [receiptToReverse, setReceiptToReverse] = useState<Receipt | null>(null);
+  const [reverseReason, setReverseReason] = useState("");
 
   const qc = useQueryClient();
+  const { role } = useAuth();
+  const canReverseReceipts = canDeleteOperationalRecords(role);
 
   const { data, isLoading } = useQuery({
     queryKey: ["receipts", search, methodFilter, page],
@@ -152,6 +167,30 @@ function ReceiptsPage() {
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  const reverseReceiptMutation = useMutation({
+    mutationFn: async ({ receiptId, reason }: { receiptId: string; reason: string }) => {
+      const { error } = await supabase.rpc("reverse_receipt", {
+        p_receipt_id: receiptId,
+        p_reason: reason.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["receipts"] }),
+        qc.invalidateQueries({ queryKey: ["invoices"] }),
+        qc.invalidateQueries({ queryKey: ["dashboard-stats"] }),
+      ]);
+      setDetails(null);
+      setReceiptToReverse(null);
+      setReverseReason("");
+      toast.success("تم عكس السند وإعادة احتساب أرصدة الفواتير");
+    },
+    onError: (error) => {
+      toast.error("تعذر عكس السند: " + getErrorMessage(error, "حدث خطأ غير متوقع"));
+    },
+  });
+
   // Customers for picker
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["customers-active"],
@@ -167,9 +206,11 @@ function ReceiptsPage() {
 
   // Stats
   const stats = useMemo(() => {
-    let total = 0;
-    for (const r of receipts) total += r.amount;
-    return { total, count: receipts.length };
+    const posted = receipts.filter((receipt) => receipt.status === "posted");
+    return {
+      total: posted.reduce((sum, receipt) => sum + receipt.amount, 0),
+      count: posted.length,
+    };
   }, [receipts]);
 
   return (
@@ -182,7 +223,7 @@ function ReceiptsPage() {
               المدفوعات وسندات القبض
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {total} سند — إجمالي المحصل: {formatMoney(stats.total)}
+              {stats.count} سند مرحّل في هذه الصفحة — إجمالي المحصل: {formatMoney(stats.total)}
             </p>
           </div>
           <Button size="sm" onClick={() => setOpen(true)}>
@@ -245,6 +286,7 @@ function ReceiptsPage() {
                     <th className="px-3 py-2 text-center">الطريقة</th>
                     <th className="px-3 py-2 text-center">المبلغ</th>
                     <th className="px-3 py-2 text-center">المرجع</th>
+                    <th className="px-3 py-2 text-center">الحالة</th>
                     <th className="px-3 py-2 text-center">إجراءات</th>
                   </tr>
                 </thead>
@@ -268,6 +310,13 @@ function ReceiptsPage() {
                         {r.reference_no || r.check_number || r.cheque_no || "—"}
                       </td>
                       <td className="px-3 py-2 text-center">
+                        <Badge
+                          variant={r.status === "posted" ? "default" : r.status === "reversal" ? "secondary" : "destructive"}
+                        >
+                          {r.status === "posted" ? "مرحل" : r.status === "reversal" ? "سند عكسي" : "ملغى"}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             size="icon"
@@ -287,6 +336,17 @@ function ReceiptsPage() {
                               <Printer className="h-4 w-4" />
                             </Link>
                           </Button>
+                          {canReverseReceipts && r.status === "posted" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setReceiptToReverse(r)}
+                              title="عكس السند"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -343,8 +403,8 @@ function ReceiptsPage() {
                 <DialogTitle>سند قبض {details.receipt_no}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
                     <div className="text-xs text-muted-foreground">المستأجر</div>
                     <div className="font-medium">{details.customers?.full_name}</div>
                   </div>
@@ -360,6 +420,14 @@ function ReceiptsPage() {
                     <div className="text-xs text-muted-foreground">المبلغ</div>
                     <div className="font-bold text-emerald-600">{formatMoney(details.amount)}</div>
                   </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">حالة السند</div>
+                  <Badge
+                    variant={details.status === "posted" ? "default" : details.status === "reversal" ? "secondary" : "destructive"}
+                  >
+                    {details.status === "posted" ? "مرحل" : details.status === "reversal" ? "سند عكسي" : "ملغى"}
+                  </Badge>
                 </div>
                 {details.bank_name && (
                   <div>
@@ -409,6 +477,12 @@ function ReceiptsPage() {
                 <Button variant="outline" onClick={() => setDetails(null)}>
                   إغلاق
                 </Button>
+                {canReverseReceipts && details.status === "posted" && (
+                  <Button variant="destructive" onClick={() => setReceiptToReverse(details)}>
+                    <RotateCcw className="h-4 w-4 ml-1" />
+                    عكس السند
+                  </Button>
+                )}
                 <Button asChild>
                   <Link
                     to="/receipts/$receiptId/print"
@@ -424,6 +498,47 @@ function ReceiptsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!receiptToReverse} onOpenChange={(isOpen) => !isOpen && setReceiptToReverse(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد عكس سند القبض</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيُلغى السند {receiptToReverse?.receipt_no} ويُنشأ سجل عكسي مرتبط به، ثم تُعاد
+              احتساب الأرصدة وحالات الفواتير المرتبطة. لا يمكن التراجع عن هذه العملية من الواجهة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reverse-reason">سبب العكس (اختياري)</Label>
+            <Input
+              id="reverse-reason"
+              value={reverseReason}
+              onChange={(event) => setReverseReason(event.target.value)}
+              placeholder="مثال: إيداع مكرر أو تصحيح قيد"
+              disabled={reverseReceiptMutation.isPending}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reverseReceiptMutation.isPending}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!receiptToReverse || reverseReceiptMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (receiptToReverse) {
+                  reverseReceiptMutation.mutate({
+                    receiptId: receiptToReverse.id,
+                    reason: reverseReason,
+                  });
+                }
+              }}
+            >
+              {reverseReceiptMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : <RotateCcw className="h-4 w-4 ml-1" />}
+              تأكيد العكس
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

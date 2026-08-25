@@ -70,6 +70,33 @@ type ConsumptionReadingRow = {
   shops: { shop_code: string; shop_name: string } | null;
 };
 
+type StatementInvoiceRow = {
+  id: string;
+  invoice_no: string;
+  invoice_date: string;
+  total_amount: number;
+  shops: { shop_code: string; shop_name: string } | null;
+};
+
+type StatementReceiptRow = {
+  id: string;
+  receipt_no: string;
+  receipt_date: string;
+  amount: number;
+  payment_method: string;
+};
+
+type StatementEntry = {
+  id: string;
+  date: string;
+  type: "invoice" | "receipt";
+  reference: string;
+  description: string;
+  debit: number;
+  credit: number;
+  balance: number;
+};
+
 export const Route = createFileRoute("/reports")({
   head: () => ({
     meta: [{ title: "التقارير — إيجاري" }, { name: "robots", content: "noindex, nofollow" }],
@@ -95,11 +122,20 @@ const ARABIC_MONTHS = [
   "نوفمبر",
   "ديسمبر",
 ];
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "نقدي",
+  check: "شيك",
+  transfer: "تحويل بنكي",
+  deposit: "إيداع",
+  wallet: "محفظة إلكترونية",
+};
 const REPORT_TYPES = [
   { id: "revenue", label: "الإيرادات الشهرية", icon: TrendingUp },
   { id: "unpaid", label: "الفواتير غير المسددة", icon: AlertTriangle },
   { id: "occupancy", label: "نسبة الإشغال والوحدات", icon: Store },
   { id: "customers", label: "قائمة العملاء وأرصدتهم", icon: Users },
+  { id: "account_statement", label: "كشف حساب مستأجر", icon: FileText },
   { id: "contracts_expiring", label: "العقود قاربت الانتهاء", icon: FileText },
   { id: "readings", label: "استهلاك الكهرباء والمياه", icon: BarChart3 },
 ];
@@ -109,6 +145,20 @@ function ReportsPage() {
   const [reportId, setReportId] = useState("revenue");
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
+  const [customerId, setCustomerId] = useState("");
+
+  const { data: statementCustomers = [] } = useQuery({
+    queryKey: ["report-statement-customers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, full_name, phone")
+        .eq("is_active", true)
+        .order("full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   return (
     <AppLayout>
@@ -140,9 +190,26 @@ function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label>الشهر</Label>
-              <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
+            {reportId === "account_statement" ? (
+              <div className="space-y-1">
+                <Label>المستأجر</Label>
+                <Select value={customerId} onValueChange={setCustomerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المستأجر لعرض كشف الحساب" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statementCustomers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.full_name}{customer.phone ? ` — ${customer.phone}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>الشهر</Label>
+                <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -153,16 +220,26 @@ function ReportsPage() {
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>السنة</Label>
-              <Input
-                type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value) || now.getFullYear())}
-              />
-            </div>
+                </Select>
+              </div>
+            )}
+            {reportId === "account_statement" ? (
+              <div className="space-y-1">
+                <Label>الفترة</Label>
+                <div className="h-10 rounded-md border bg-muted/40 px-3 flex items-center text-sm text-muted-foreground">
+                  جميع الحركات حتى اليوم
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>السنة</Label>
+                <Input
+                  type="number"
+                  value={year}
+                  onChange={(e) => setYear(parseInt(e.target.value) || now.getFullYear())}
+                />
+              </div>
+            )}
           </div>
           <div className="flex gap-2 mt-4 justify-end">
             <Button variant="outline" size="sm" onClick={() => window.print()}>
@@ -177,7 +254,7 @@ function ReportsPage() {
         </Card>
 
         <Card className="p-6 print:shadow-none">
-          <ReportContent reportId={reportId} month={month} year={year} />
+          <ReportContent reportId={reportId} month={month} year={year} customerId={customerId} />
         </Card>
       </div>
     </AppLayout>
@@ -188,15 +265,18 @@ function ReportContent({
   reportId,
   month,
   year,
+  customerId,
 }: {
   reportId: string;
   month: number;
   year: number;
+  customerId: string;
 }) {
   if (reportId === "revenue") return <RevenueReport month={month} year={year} />;
   if (reportId === "unpaid") return <UnpaidReport month={month} year={year} />;
   if (reportId === "occupancy") return <OccupancyReport />;
   if (reportId === "customers") return <CustomersReport />;
+  if (reportId === "account_statement") return <CustomerStatementReport customerId={customerId} />;
   if (reportId === "contracts_expiring") return <ExpiringContractsReport />;
   if (reportId === "readings") return <ReadingsReport month={month} year={year} />;
   return <p className="text-muted-foreground text-center py-12">اختر تقريراً لعرضه</p>;
@@ -218,7 +298,8 @@ function RevenueReport({ month, year }: { month: number; year: number }) {
         .select("amount")
         .gte("receipt_date", `${year}-${String(month).padStart(2, "0")}-01`)
         .lte("receipt_date", `${year}-${String(month).padStart(2, "0")}-31`)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .eq("status", "posted");
       const total = (invs ?? []).reduce((s, i) => s + (i.total_amount || 0), 0);
       const billed = invs?.length ?? 0;
       const receipts = (rcps ?? []).reduce((s, r) => s + (r.amount || 0), 0);
@@ -397,7 +478,111 @@ function CustomersReport() {
   );
 }
 
-// 5. Expiring contracts
+// 5. Customer statement
+function CustomerStatementReport({ customerId }: { customerId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["report-customer-statement", customerId],
+    enabled: !!customerId,
+    queryFn: async () => {
+      const [customerResult, invoicesResult, receiptsResult] = await Promise.all([
+        supabase.from("customers").select("id, full_name, phone").eq("id", customerId).single(),
+        supabase
+          .from("invoices")
+          .select("id, invoice_no, invoice_date, total_amount, shops(shop_code, shop_name)")
+          .eq("customer_id", customerId)
+          .neq("status", "cancelled"),
+        supabase
+          .from("receipts")
+          .select("id, receipt_no, receipt_date, amount, payment_method")
+          .eq("customer_id", customerId)
+          .eq("status", "posted")
+          .eq("is_active", true),
+      ]);
+
+      if (customerResult.error) throw customerResult.error;
+      if (invoicesResult.error) throw invoicesResult.error;
+      if (receiptsResult.error) throw receiptsResult.error;
+
+      const invoiceEntries = ((invoicesResult.data ?? []) as unknown as StatementInvoiceRow[]).map(
+        (invoice) => ({
+          id: invoice.id,
+          date: invoice.invoice_date,
+          type: "invoice" as const,
+          reference: invoice.invoice_no,
+          description: invoice.shops
+            ? `فاتورة الوحدة ${invoice.shops.shop_code} — ${invoice.shops.shop_name}`
+            : "فاتورة إيجار وخدمات",
+          debit: Number(invoice.total_amount) || 0,
+          credit: 0,
+        }),
+      );
+      const receiptEntries = ((receiptsResult.data ?? []) as unknown as StatementReceiptRow[]).map(
+        (receipt) => ({
+          id: receipt.id,
+          date: receipt.receipt_date,
+          type: "receipt" as const,
+          reference: receipt.receipt_no,
+          description: `سند قبض — ${PAYMENT_METHOD_LABELS[receipt.payment_method] ?? receipt.payment_method}`,
+          debit: 0,
+          credit: Number(receipt.amount) || 0,
+        }),
+      );
+
+      let runningBalance = 0;
+      const entries = [...invoiceEntries, ...receiptEntries]
+        .sort((first, second) => first.date.localeCompare(second.date) || first.reference.localeCompare(second.reference))
+        .map((entry) => {
+          runningBalance += entry.debit - entry.credit;
+          return { ...entry, balance: runningBalance } as StatementEntry;
+        });
+
+      return {
+        customer: customerResult.data,
+        entries,
+        debitTotal: invoiceEntries.reduce((sum, entry) => sum + entry.debit, 0),
+        creditTotal: receiptEntries.reduce((sum, entry) => sum + entry.credit, 0),
+        balance: runningBalance,
+      };
+    },
+  });
+
+  if (!customerId) {
+    return <p className="text-muted-foreground text-center py-12">اختر مستأجراً لعرض كشف الحساب.</p>;
+  }
+  if (isLoading) return <Loader />;
+
+  return (
+    <div>
+      <ReportHeader
+        title="كشف حساب مستأجر"
+        subtitle={`${data?.customer?.full_name ?? ""}${data?.customer?.phone ? ` — ${data.customer.phone}` : ""}`}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <StatBox label="إجمالي الفواتير" value={formatMoney(data?.debitTotal ?? 0)} />
+        <StatBox label="إجمالي المقبوضات" value={formatMoney(data?.creditTotal ?? 0)} color="emerald" />
+        <StatBox label="الرصيد المستحق" value={formatMoney(data?.balance ?? 0)} color={(data?.balance ?? 0) > 0 ? "rose" : "blue"} />
+      </div>
+      <ReportTable columns={["التاريخ", "النوع", "المرجع", "البيان", "مدين", "دائن", "الرصيد"]}>
+        {(data?.entries ?? []).map((entry) => (
+          <tr key={`${entry.type}-${entry.id}`} className="border-t">
+            <td className="px-3 py-2 text-xs whitespace-nowrap">{entry.date}</td>
+            <td className="px-3 py-2">{entry.type === "invoice" ? "فاتورة" : "سند قبض"}</td>
+            <td className="px-3 py-2 font-mono text-xs">{entry.reference}</td>
+            <td className="px-3 py-2">{entry.description}</td>
+            <td className="px-3 py-2 text-center tabular-nums text-rose-600">{entry.debit ? formatMoney(entry.debit) : "—"}</td>
+            <td className="px-3 py-2 text-center tabular-nums text-emerald-600">{entry.credit ? formatMoney(entry.credit) : "—"}</td>
+            <td className="px-3 py-2 text-center tabular-nums font-bold">{formatMoney(entry.balance)}</td>
+          </tr>
+        ))}
+      </ReportTable>
+      {(data?.entries ?? []).length === 0 && (
+        <p className="text-center text-sm text-muted-foreground py-8">لا توجد فواتير أو سندات قبض لهذا المستأجر.</p>
+      )}
+    </div>
+  );
+}
+
+// 6. Expiring contracts
 function ExpiringContractsReport() {
   const { data, isLoading } = useQuery({
     queryKey: ["report-expiring"],
@@ -453,7 +638,7 @@ function ExpiringContractsReport() {
   );
 }
 
-// 6. Meter readings / consumption
+// 7. Meter readings / consumption
 function ReadingsReport({ month, year }: { month: number; year: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ["report-readings", month, year],

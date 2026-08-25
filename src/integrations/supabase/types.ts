@@ -906,6 +906,10 @@ export type Database = {
         Args: { p_request_id: string };
         Returns: Json;
       };
+      reverse_receipt: {
+        Args: { p_receipt_id: string; p_reason?: string | null };
+        Returns: string;
+      };
       approve_tenant_account_request: {
         Args: { p_request_id: string };
         Returns: Json;
