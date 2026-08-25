@@ -910,6 +910,21 @@ export type Database = {
         Args: { p_receipt_id: string; p_reason?: string | null };
         Returns: string;
       };
+      renew_contract: {
+        Args: {
+          p_contract_id: string;
+          p_contract_no: string;
+          p_start_date: string;
+          p_end_date: string;
+          p_monthly_rent: number;
+          p_holiday_increase?: number | null;
+          p_due_day?: number | null;
+          p_payment_method?: Database["public"]["Enums"]["payment_method"] | null;
+          p_insurance_amount?: number | null;
+          p_notes?: string | null;
+        };
+        Returns: string;
+      };
       approve_tenant_account_request: {
         Args: { p_request_id: string };
         Returns: Json;

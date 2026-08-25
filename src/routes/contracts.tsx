@@ -44,6 +44,7 @@ import {
   Calendar,
   User as UserIcon,
   Store as StoreIcon,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney, formatDate } from "@/lib/format";
@@ -64,7 +65,7 @@ export const Route = createFileRoute("/contracts")({
   ),
 });
 
-type ContractStatus = "active" | "expired" | "cancelled";
+type ContractStatus = "active" | "expired" | "cancelled" | "renewed";
 
 interface Contract {
   id: string;
@@ -77,8 +78,21 @@ interface Contract {
   holiday_increase: number;
   status: ContractStatus;
   notes: string | null;
+  due_day: number | null;
+  insurance_amount: number | null;
+  renewed_from_id: string | null;
   shops?: { shop_code: string; shop_name: string };
   customers?: { full_name: string; phone: string };
+}
+
+interface RenewalForm {
+  contract_no: string;
+  start_date: string;
+  end_date: string;
+  monthly_rent: string;
+  holiday_increase: string;
+  insurance_amount: string;
+  notes: string;
 }
 
 interface FormData {
@@ -114,7 +128,29 @@ const STATUS_LABELS: Record<ContractStatus, string> = {
   active: "ساري",
   expired: "منتهي",
   cancelled: "ملغى",
+  renewed: "مجدّد",
 };
+
+function toIsoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function buildRenewalForm(contract: Contract): RenewalForm {
+  const start = new Date(`${contract.end_date}T00:00:00.000Z`);
+  start.setUTCDate(start.getUTCDate() + 1);
+  const end = new Date(start);
+  end.setUTCFullYear(end.getUTCFullYear() + 1);
+  end.setUTCDate(end.getUTCDate() - 1);
+  return {
+    contract_no: `${contract.contract_no}-R${start.getUTCFullYear()}`,
+    start_date: toIsoDate(start),
+    end_date: toIsoDate(end),
+    monthly_rent: String(contract.monthly_rent ?? 0),
+    holiday_increase: String(contract.holiday_increase ?? 0),
+    insurance_amount: String(contract.insurance_amount ?? 0),
+    notes: `تجديد للعقد رقم ${contract.contract_no}`,
+  };
+}
 
 function ContractsList() {
   const { role } = useAuth();
@@ -127,6 +163,8 @@ function ContractsList() {
   const [editing, setEditing] = useState<Contract | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null);
+  const [renewTarget, setRenewTarget] = useState<Contract | null>(null);
+  const [renewalForm, setRenewalForm] = useState<RenewalForm | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["contracts", search, statusFilter, page],
@@ -210,6 +248,30 @@ function ContractsList() {
     onError: (e: Error) => toast.error(e.message || "فشل الحفظ"),
   });
 
+  const renewMutation = useMutation({
+    mutationFn: async () => {
+      if (!renewTarget || !renewalForm) throw new Error("اختر العقد المراد تجديده");
+      const { error } = await supabase.rpc("renew_contract", {
+        p_contract_id: renewTarget.id,
+        p_contract_no: renewalForm.contract_no.trim(),
+        p_start_date: renewalForm.start_date,
+        p_end_date: renewalForm.end_date,
+        p_monthly_rent: Number(renewalForm.monthly_rent) || 0,
+        p_holiday_increase: Number(renewalForm.holiday_increase) || 0,
+        p_insurance_amount: Number(renewalForm.insurance_amount) || 0,
+        p_notes: renewalForm.notes.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("تم تجديد العقد وحفظ ارتباطه بالعقد السابق");
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      setRenewTarget(null);
+      setRenewalForm(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "فشل تجديد العقد"),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.rpc("archive_contract", { p_contract_id: id });
@@ -222,6 +284,11 @@ function ContractsList() {
     },
     onError: (e: Error) => toast.error(e.message || "فشل الحذف"),
   });
+
+  function openRenew(contract: Contract) {
+    setRenewTarget(contract);
+    setRenewalForm(buildRenewalForm(contract));
+  }
 
   function openCreate() {
     setEditing(null);
@@ -290,6 +357,7 @@ function ContractsList() {
               <SelectItem value="active">السارية</SelectItem>
               <SelectItem value="expired">المنتهية</SelectItem>
               <SelectItem value="cancelled">الملغاة</SelectItem>
+              <SelectItem value="renewed">المجددة</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -346,7 +414,9 @@ function ContractsList() {
                             ? "default"
                             : c.status === "expired"
                               ? "secondary"
-                              : "destructive"
+                              : c.status === "renewed"
+                                ? "outline"
+                                : "destructive"
                         }
                       >
                         {STATUS_LABELS[c.status]}
@@ -354,9 +424,14 @@ function ContractsList() {
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)}>
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)} title="تعديل العقد">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        {canDelete && (c.status === "active" || c.status === "expired") && (
+                          <Button size="icon" variant="ghost" onClick={() => openRenew(c)} title="تجديد العقد">
+                            <RefreshCw className="h-3.5 w-3.5 text-primary" />
+                          </Button>
+                        )}
                         {canDelete && (
                           <Button
                             size="icon"
@@ -543,6 +618,134 @@ function ContractsList() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!renewTarget}
+        onOpenChange={(open) => {
+          if (!open && !renewMutation.isPending) {
+            setRenewTarget(null);
+            setRenewalForm(null);
+          }
+        }}
+      >
+        <DialogContent dir="rtl" className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" />
+              تجديد العقد {renewTarget?.contract_no}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              سيُحفظ العقد الحالي بحالة «مجدّد»، وسيُنشأ عقد ساري جديد مرتبط به لأغراض المراجعة.
+            </p>
+          </DialogHeader>
+          {renewalForm && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                renewMutation.mutate();
+              }}
+              className="space-y-4"
+            >
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                <div className="font-bold">الوحدة والمستأجر</div>
+                <div className="mt-1 text-muted-foreground">
+                  {renewTarget?.shops?.shop_code} — {renewTarget?.shops?.shop_name} · {renewTarget?.customers?.full_name}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>رقم العقد الجديد *</Label>
+                  <Input
+                    value={renewalForm.contract_no}
+                    onChange={(event) => setRenewalForm((form) => form ? { ...form, contract_no: event.target.value } : form)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>تاريخ البداية *</Label>
+                  <Input
+                    type="date"
+                    value={renewalForm.start_date}
+                    min={renewTarget ? toIsoDate(new Date(`${renewTarget.end_date}T00:00:00.000Z`)) : undefined}
+                    onChange={(event) => setRenewalForm((form) => form ? { ...form, start_date: event.target.value } : form)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>تاريخ النهاية *</Label>
+                  <Input
+                    type="date"
+                    value={renewalForm.end_date}
+                    min={renewalForm.start_date}
+                    onChange={(event) => setRenewalForm((form) => form ? { ...form, end_date: event.target.value } : form)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الإيجار الشهري *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={renewalForm.monthly_rent}
+                    onChange={(event) => setRenewalForm((form) => form ? { ...form, monthly_rent: event.target.value } : form)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>زيادة العيد</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={renewalForm.holiday_increase}
+                    onChange={(event) => setRenewalForm((form) => form ? { ...form, holiday_increase: event.target.value } : form)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>التأمين</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={renewalForm.insurance_amount}
+                    onChange={(event) => setRenewalForm((form) => form ? { ...form, insurance_amount: event.target.value } : form)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>ملاحظات التجديد</Label>
+                <Textarea
+                  rows={3}
+                  value={renewalForm.notes}
+                  onChange={(event) => setRenewalForm((form) => form ? { ...form, notes: event.target.value } : form)}
+                />
+              </div>
+              <DialogFooter className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setRenewTarget(null);
+                    setRenewalForm(null);
+                  }}
+                  disabled={renewMutation.isPending}
+                >
+                  إلغاء
+                </Button>
+                <Button type="submit" disabled={renewMutation.isPending}>
+                  {renewMutation.isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                  اعتماد التجديد
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
