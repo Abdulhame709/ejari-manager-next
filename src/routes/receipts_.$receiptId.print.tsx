@@ -37,7 +37,6 @@ interface ReceiptPrintData {
   amount: number;
   payment_method: "cash" | "check" | "cheque" | "transfer" | "deposit" | "wallet";
   reference_no: string | null;
-  transfer_ref: string | null;
   bank_name: string | null;
   check_number: string | null;
   cheque_no: string | null;
@@ -123,8 +122,7 @@ function ReceiptPrintPage() {
 
   const receipt = receiptQuery.data;
   const settings = settingsQuery.data ?? DEFAULT_PRINT_SETTINGS;
-  const reference =
-    receipt.reference_no || receipt.transfer_ref || receipt.check_number || receipt.cheque_no;
+  const reference = receipt.reference_no || receipt.check_number || receipt.cheque_no;
   const checkDate = receipt.check_date || receipt.cheque_date;
   const isReversal = receipt.status === "reversal" || receipt.amount < 0;
 
