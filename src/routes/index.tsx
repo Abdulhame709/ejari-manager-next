@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Gauge,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
@@ -148,6 +149,16 @@ function Dashboard() {
                 count={stats?.expiringContracts ?? 0}
                 description="عقد ينتهي خلال 30 يوماً"
                 link="/contracts"
+              />
+            )}
+            {canAccessPath(role, "/readings") && (
+              <AlertRow
+                icon={Gauge}
+                tone="warning"
+                title="قراءات عدادات مطلوبة"
+                count={stats?.missingReadings ?? 0}
+                description="وحدة نشطة لم تسجل لها قراءة هذا الشهر"
+                link="/readings"
               />
             )}
             {canAccessPath(role, "/invoices") && (
@@ -342,6 +353,7 @@ interface DashboardStats {
   unpaidInvoicesCount: number;
   paidInvoicesCount: number;
   expiringContracts: number;
+  missingReadings: number;
 }
 
 async function fetchStats(): Promise<DashboardStats> {
@@ -359,6 +371,8 @@ async function fetchStats(): Promise<DashboardStats> {
   const [
     shopsAll,
     shopsActive,
+    activeShopRows,
+    currentMonthReadings,
     customers,
     contracts,
     invoicesThisMonth,
@@ -369,34 +383,43 @@ async function fetchStats(): Promise<DashboardStats> {
   ] = await Promise.all([
     supabase.from("shops").select("id", { count: "exact", head: true }),
     supabase.from("shops").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("shops").select("id").eq("is_active", true),
+    supabase.from("meter_readings").select("shop_id").eq("reading_month", month).eq("reading_year", year),
     supabase.from("customers").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase
       .from("invoices")
       .select("total_amount, remaining_amount", { count: "exact" })
       .eq("invoice_month", month)
-      .eq("invoice_year", year),
+      .eq("invoice_year", year)
+      .neq("status", "cancelled"),
     supabase
       .from("invoices")
       .select("remaining_amount", { count: "exact" })
-      .in("payment_status", ["unpaid", "partial"]),
+      .in("payment_status", ["unpaid", "partial"])
+      .neq("status", "cancelled"),
     supabase
       .from("invoices")
       .select("id", { count: "exact", head: true })
-      .eq("payment_status", "paid"),
+      .eq("payment_status", "paid")
+      .neq("status", "cancelled"),
     supabase
       .from("contracts")
       .select("id", { count: "exact", head: true })
       .eq("status", "active")
+      .gte("end_date", new Date().toISOString().split("T")[0])
       .lte("end_date", in30days.toISOString().split("T")[0]),
     supabase
       .from("receipts")
       .select("amount")
       .gte("receipt_date", firstDay)
       .lte("receipt_date", lastDay)
-      .eq("is_active", true),
+      .eq("is_active", true)
+      .eq("status", "posted"),
   ]);
 
+  const readShopIds = new Set((currentMonthReadings.data ?? []).map((reading) => reading.shop_id));
+  const missingReadings = (activeShopRows.data ?? []).filter((shop) => !readShopIds.has(shop.id)).length;
   const thisMonthRevenue = (invoicesThisMonth.data ?? []).reduce(
     (s, i) => s + Number(i.total_amount ?? 0),
     0,
@@ -422,5 +445,6 @@ async function fetchStats(): Promise<DashboardStats> {
     unpaidInvoicesCount: invoicesUnpaid.count ?? 0,
     paidInvoicesCount: invoicesPaid.count ?? 0,
     expiringContracts: expiring.count ?? 0,
+    missingReadings,
   };
 }

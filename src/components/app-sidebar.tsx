@@ -10,6 +10,7 @@ import {
   Receipt,
   Settings,
   ShieldCheck,
+  ScrollText,
   Store,
   UserRound,
   Users,
@@ -67,6 +68,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: PAGE_ROLES.permissions,
   },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: PAGE_ROLES.settings },
+  { to: "/audit", label: "سجل التدقيق", icon: ScrollText, roles: PAGE_ROLES.audit },
 ];
 
 export function AppSidebar() {
