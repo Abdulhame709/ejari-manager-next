@@ -25,9 +25,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, Trash2, Pencil, Search, Loader2 } from "lucide-react";
+import { Building2, Plus, Trash2, Pencil, Search, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/data-states";
+import { CsvImportDialog } from "@/components/csv-import-dialog";
 
 export const Route = createFileRoute("/properties")({
   head: () => ({
@@ -59,6 +60,7 @@ function PropertiesPage() {
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<Partial<Property> | null>(null);
   const [deleteProp, setDeleteProp] = useState<Property | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: properties = [], isLoading } = useQuery<Property[]>({
     queryKey: ["properties", search],
@@ -169,10 +171,16 @@ function PropertiesPage() {
               إدارة المباني والمجمعات والمراكز التجارية التي تحتوي على وحدات
             </p>
           </div>
-          <Button size="sm" onClick={() => setDialog({ is_active: true })}>
-            <Plus className="h-4 w-4 ml-1" />
-            إضافة عقار
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 ml-1" />
+              استيراد CSV / Excel
+            </Button>
+            <Button size="sm" onClick={() => setDialog({ is_active: true })}>
+              <Plus className="h-4 w-4 ml-1" />
+              إضافة عقار
+            </Button>
+          </div>
         </div>
 
         <Card className="p-3">
@@ -252,6 +260,56 @@ function PropertiesPage() {
           )}
         </Card>
       </div>
+
+      <CsvImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="استيراد العقارات"
+        description="استخدم القالب، راجع المعاينة، ثم أكد الإدراج. يمنع الاستيراد تكرار اسم العقار داخل الملف أو في قاعدة البيانات."
+        headers={["name", "city", "address", "phone", "description"]}
+        headerAliases={{
+          "اسم العقار": "name",
+          "اسم المجمع": "name",
+          "المدينة": "city",
+          "العنوان": "address",
+          "الهاتف": "phone",
+          "الجوال": "phone",
+          "الوصف": "description",
+        }}
+        previewColumns={["name", "city", "phone", "address"]}
+        parseRow={(row, rowNumber) => {
+          const name = row.name?.trim();
+          if (!name) return { error: `السطر ${rowNumber}: اسم العقار مطلوب` };
+          return {
+            value: {
+              name,
+              city: row.city?.trim() || null,
+              address: row.address?.trim() || null,
+              phone: row.phone?.trim() || null,
+              description: row.description?.trim() || null,
+              is_active: true,
+            },
+          };
+        }}
+        onImport={async (rows) => {
+          const names = rows.map((row) => row.name.trim());
+          const duplicate = names.find((name, index) => names.indexOf(name) !== index);
+          if (duplicate) throw new Error(`اسم عقار مكرر داخل الملف: ${duplicate}`);
+          const { data: existing, error: lookupError } = await supabase
+            .from("properties")
+            .select("name")
+            .in("name", names);
+          if (lookupError) throw lookupError;
+          if ((existing?.length ?? 0) > 0)
+            throw new Error(`اسم عقار مستخدم مسبقاً: ${existing?.[0]?.name}`);
+          const { error } = await supabase.from("properties").insert(rows);
+          if (error) throw error;
+          await Promise.all([
+            qc.invalidateQueries({ queryKey: ["properties"] }),
+            qc.invalidateQueries({ queryKey: ["property-unit-counts"] }),
+          ]);
+        }}
+      />
 
       <Dialog open={!!dialog} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent dir="rtl" className="max-w-md">

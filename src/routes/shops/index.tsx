@@ -349,7 +349,7 @@ function ShopsPage() {
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <Upload className="h-4 w-4 ml-2" />
-              استيراد CSV
+              استيراد CSV / Excel
             </Button>
             <Button
               onClick={() => {
@@ -556,11 +556,11 @@ function ShopsPage() {
         open={importOpen}
         onOpenChange={setImportOpen}
         title="استيراد الوحدات"
-        description="استخدم القالب، راجع الصفوف، ثم أكد الإدراج. يجب أن تكون أكواد الوحدات فريدة وأن تكون property_id قيمة صحيحة عند استخدامها."
+        description="استخدم القالب، راجع الصفوف، ثم أكد الإدراج. استورد العقارات أولاً ثم اربط الوحدة باسم العقار، مع منع تكرار كود الوحدة."
         headers={[
           "shop_code",
           "shop_name",
-          "property_id",
+          "property_name",
           "unit_type",
           "status",
           "monthly_rent",
@@ -569,10 +569,29 @@ function ShopsPage() {
           "water_meter_type",
           "description",
         ]}
-        previewColumns={["shop_code", "shop_name", "unit_type", "monthly_rent"]}
+        headerAliases={{
+          "كود الوحدة": "shop_code",
+          "رمز الوحدة": "shop_code",
+          "اسم الوحدة": "shop_name",
+          "اسم المحل": "shop_name",
+          "اسم العقار": "property_name",
+          "العقار": "property_name",
+          "نوع الوحدة": "unit_type",
+          "الحالة": "status",
+          "الإيجار الشهري": "monthly_rent",
+          "المساحة": "area_sqm",
+          "نوع عداد الكهرباء": "elec_meter_type",
+          "نوع عداد الماء": "water_meter_type",
+          "الوصف": "description",
+        }}
+        previewColumns={["shop_code", "shop_name", "property_name", "unit_type", "monthly_rent"]}
         parseRow={(row, rowNumber) => {
           const code = row.shop_code?.trim();
           const name = row.shop_name?.trim();
+          const propertyName = row.property_name?.trim();
+          const property = propertyName
+            ? properties.find((item) => item.name.trim().toLocaleLowerCase() === propertyName.toLocaleLowerCase())
+            : null;
           const rent = Number(row.monthly_rent || 0);
           const area = Number(row.area_sqm || 0);
           const elecMeterType = Number(row.elec_meter_type || 3);
@@ -580,6 +599,8 @@ function ShopsPage() {
           const unitTypes = ["shop", "apartment", "office", "warehouse", "land", "clinic", "other"];
           const statuses = ["available", "rented", "reserved", "maintenance", "inactive"];
           if (!code || !name) return { error: `السطر ${rowNumber}: كود الوحدة والاسم مطلوبان` };
+          if (propertyName && !property)
+            return { error: `السطر ${rowNumber}: العقار «${propertyName}» غير موجود؛ استورده أولاً أو اترك الحقل فارغاً` };
           if (
             Number.isNaN(rent) ||
             rent < 0 ||
@@ -599,7 +620,7 @@ function ShopsPage() {
             value: {
               shop_code: code,
               shop_name: name,
-              property_id: row.property_id?.trim() || null,
+              property_id: property?.id ?? null,
               unit_type: (row.unit_type || "shop") as UnitType,
               status: (row.status || "available") as UnitStatus,
               monthly_rent: rent,
@@ -616,12 +637,22 @@ function ShopsPage() {
           };
         }}
         onImport={async (rows) => {
-          const codes = rows.map((row) => row.shop_code);
-          if (new Set(codes).size !== codes.length)
-            throw new Error("يوجد كود وحدة مكرر داخل الملف");
+          const codes = rows.map((row) => row.shop_code.trim());
+          const duplicate = codes.find((code, index) => codes.indexOf(code) !== index);
+          if (duplicate) throw new Error(`كود وحدة مكرر داخل الملف: ${duplicate}`);
+          const { data: existing, error: lookupError } = await supabase
+            .from("shops")
+            .select("shop_code")
+            .in("shop_code", codes);
+          if (lookupError) throw lookupError;
+          if ((existing?.length ?? 0) > 0)
+            throw new Error(`كود وحدة مستخدم مسبقاً: ${existing?.[0]?.shop_code}`);
           const { error } = await supabase.from("shops").insert(rows);
           if (error) throw error;
-          await qc.invalidateQueries({ queryKey: ["shops"] });
+          await Promise.all([
+            qc.invalidateQueries({ queryKey: ["shops"] }),
+            qc.invalidateQueries({ queryKey: ["property-unit-counts"] }),
+          ]);
         }}
       />
 
