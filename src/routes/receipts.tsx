@@ -47,12 +47,17 @@ import {
   Eye,
   CheckCircle2,
   Calendar,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatMoney } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 import { getErrorMessage, sanitizeSearchTerm } from "@/lib/utils";
+import {
+  ReceiptNotificationDialog,
+  type ReceiptNotificationData,
+} from "@/components/receipt-notification-dialog";
 
 export const Route = createFileRoute("/receipts")({
   head: () => ({
@@ -98,7 +103,7 @@ interface Receipt {
   is_active: boolean;
   status: string;
   created_at: string;
-  customers?: { full_name: string };
+  customers?: { full_name: string; phone: string | null };
   receipt_details?: { invoice_id: string; amount_paid: number }[];
 }
 
@@ -133,6 +138,7 @@ function ReceiptsPage() {
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState<Receipt | null>(null);
+  const [notificationReceipt, setNotificationReceipt] = useState<Receipt | null>(null);
   const [receiptToReverse, setReceiptToReverse] = useState<Receipt | null>(null);
   const [reverseReason, setReverseReason] = useState("");
 
@@ -145,7 +151,7 @@ function ReceiptsPage() {
     queryFn: async () => {
       let q = supabase
         .from("receipts")
-        .select("*, customers(full_name), receipt_details(invoice_id, amount_paid)", {
+        .select("*, customers(full_name, phone), receipt_details(invoice_id, amount_paid)", {
           count: "exact",
         })
         .eq("is_active", true);
@@ -326,6 +332,17 @@ function ReceiptsPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {r.status === "posted" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-emerald-700 hover:text-emerald-800"
+                              onClick={() => setNotificationReceipt(r)}
+                              title="تجهيز إشعار استلام"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button asChild size="icon" variant="ghost" className="h-7 w-7">
                             <Link
                               to="/receipts/$receiptId/print"
@@ -382,6 +399,12 @@ function ReceiptsPage() {
           )}
         </Card>
       </div>
+
+      <ReceiptNotificationDialog
+        receipt={notificationReceipt ? toReceiptNotification(notificationReceipt) : null}
+        open={!!notificationReceipt}
+        onOpenChange={(isOpen) => !isOpen && setNotificationReceipt(null)}
+      />
 
       <ReceiptFormDialog
         open={open}
@@ -477,6 +500,18 @@ function ReceiptsPage() {
                 <Button variant="outline" onClick={() => setDetails(null)}>
                   إغلاق
                 </Button>
+                {details.status === "posted" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setNotificationReceipt(details);
+                      setDetails(null);
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4 ml-1" />
+                    إشعار
+                  </Button>
+                )}
                 {canReverseReceipts && details.status === "posted" && (
                   <Button variant="destructive" onClick={() => setReceiptToReverse(details)}>
                     <RotateCcw className="h-4 w-4 ml-1" />
@@ -544,6 +579,18 @@ function ReceiptsPage() {
 }
 
 // Receipt form dialog
+function toReceiptNotification(receipt: Receipt): ReceiptNotificationData {
+  return {
+    id: receipt.id,
+    receiptNo: receipt.receipt_no,
+    customerName: receipt.customers?.full_name ?? "المستأجر",
+    customerPhone: receipt.customers?.phone ?? null,
+    receiptDate: format(new Date(receipt.receipt_date), "yyyy/MM/dd"),
+    amount: receipt.amount,
+    paymentMethod: receipt.payment_method,
+  };
+}
+
 function ReceiptFormDialog({
   open,
   onClose,

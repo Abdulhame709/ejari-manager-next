@@ -43,6 +43,7 @@ import {
   Clock,
   AlertCircle,
   Printer,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
@@ -51,6 +52,10 @@ import { format } from "date-fns";
 import { formatMoney } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 import { sanitizeSearchTerm } from "@/lib/utils";
+import {
+  InvoiceNotificationDialog,
+  type InvoiceNotificationData,
+} from "@/components/invoice-notification-dialog";
 
 export const Route = createFileRoute("/invoices")({
   head: () => ({
@@ -168,6 +173,7 @@ function InvoicesPage() {
   const [page, setPage] = useState(0);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [detailsInv, setDetailsInv] = useState<Invoice | null>(null);
+  const [notificationInv, setNotificationInv] = useState<Invoice | null>(null);
   const [deleteInv, setDeleteInv] = useState<Invoice | null>(null);
 
   const qc = useQueryClient();
@@ -470,6 +476,15 @@ function InvoicesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-emerald-700 hover:text-emerald-800"
+                            onClick={() => setNotificationInv(inv)}
+                            title="تجهيز إشعار للمستأجر"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
                           <Button asChild size="icon" variant="ghost" className="h-7 w-7">
                             <Link
                               to="/invoices/$invoiceId/print"
@@ -525,6 +540,12 @@ function InvoicesPage() {
           )}
         </Card>
       </div>
+
+      <InvoiceNotificationDialog
+        invoice={notificationInv ? toInvoiceNotification(notificationInv) : null}
+        open={!!notificationInv}
+        onOpenChange={(open) => !open && setNotificationInv(null)}
+      />
 
       {/* Generate Bulk Dialog */}
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
@@ -664,6 +685,16 @@ function InvoicesPage() {
                 <Button variant="outline" onClick={() => setDetailsInv(null)}>
                   إغلاق
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNotificationInv(detailsInv);
+                    setDetailsInv(null);
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4 ml-1" />
+                  إشعار
+                </Button>
                 <Button asChild variant="outline">
                   <Link
                     to="/invoices/$invoiceId/print"
@@ -715,6 +746,20 @@ function InvoicesPage() {
       </AlertDialog>
     </AppLayout>
   );
+}
+
+function toInvoiceNotification(invoice: Invoice): InvoiceNotificationData {
+  return {
+    id: invoice.id,
+    invoiceNo: invoice.invoice_no,
+    customerName: invoice.customers?.full_name ?? "المستأجر",
+    customerPhone: invoice.customers?.phone ?? null,
+    shopName: invoice.shops?.shop_name ?? invoice.shops?.shop_code ?? "الوحدة",
+    monthLabel: `${ARABIC_MONTHS[invoice.invoice_month - 1] ?? invoice.invoice_month} ${invoice.invoice_year}`,
+    totalAmount: invoice.total_amount,
+    remainingAmount: invoice.remaining_amount,
+    dueDate: invoice.due_date ? format(new Date(invoice.due_date), "yyyy/MM/dd") : null,
+  };
 }
 
 // Helpers
