@@ -38,8 +38,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar />
-      <main className="mr-64 min-h-screen">
-        <div className="container mx-auto max-w-7xl px-6 py-8">{children}</div>
+      <main className="min-h-screen lg:mr-64">
+        <div className="container mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">{children}</div>
       </main>
     </div>
   );

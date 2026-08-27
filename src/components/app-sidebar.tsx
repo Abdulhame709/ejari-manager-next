@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -7,6 +8,7 @@ import {
   Gauge,
   LayoutDashboard,
   LogOut,
+  Menu,
   Receipt,
   Settings,
   ShieldCheck,
@@ -17,6 +19,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { EjariLogo } from "@/components/ejari-logo";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useAuth, ROLE_LABELS, type AppRole } from "@/lib/auth-context";
 import { hasAnyRole, PAGE_ROLES } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
@@ -73,21 +76,84 @@ const NAV_ITEMS: NavItem[] = [
 
 export function AppSidebar() {
   const { fullName, role, signOut, user } = useAuth();
-  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   if (!user || !role) return null;
 
   const visibleItems = NAV_ITEMS.filter((item) => hasAnyRole(role, item.roles));
+  const closeMobileNavigation = () => setMobileOpen(false);
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-30 flex w-64 flex-col gradient-sidebar text-sidebar-foreground shadow-elegant">
+    <>
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden">
+        <EjariLogo className="[&>div>div:first-child]:text-foreground [&>div>div:last-child]:text-primary" />
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border bg-card text-foreground shadow-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="فتح قائمة التنقل"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </header>
+
+      <aside className="fixed inset-y-0 right-0 z-30 hidden w-64 flex-col gradient-sidebar text-sidebar-foreground shadow-elegant lg:flex">
+        <SidebarContent
+          visibleItems={visibleItems}
+          fullName={fullName}
+          role={role}
+          onSignOut={() => void signOut()}
+        />
+      </aside>
+
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent
+          side="right"
+          dir="rtl"
+          className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground sm:max-w-xs [&>button]:text-sidebar-foreground"
+        >
+          <SheetTitle className="sr-only">قائمة تنقل إيجاري</SheetTitle>
+          <SheetDescription className="sr-only">انتقل بين صفحات نظام إيجاري.</SheetDescription>
+          <SidebarContent
+            visibleItems={visibleItems}
+            fullName={fullName}
+            role={role}
+            onNavigate={closeMobileNavigation}
+            onSignOut={() => {
+              closeMobileNavigation();
+              void signOut();
+            }}
+          />
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+function SidebarContent({
+  visibleItems,
+  fullName,
+  role,
+  onNavigate,
+  onSignOut,
+}: {
+  visibleItems: NavItem[];
+  fullName: string | null;
+  role: AppRole;
+  onNavigate?: () => void;
+  onSignOut: () => void;
+}) {
+  const location = useLocation();
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
       <div className="border-b border-sidebar-border px-5 py-5">
         <EjariLogo className="[&>div>div:first-child]:text-white [&>div>div:last-child]:text-cyan-200" />
       </div>
       <div className="mx-3 mt-4 flex items-center gap-2 rounded-lg border border-cyan-300/10 bg-cyan-300/10 px-3 py-2 text-[11px] text-cyan-100">
         <Building2 className="h-3.5 w-3.5" /> إدارة عقارات متكاملة
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="التنقل الرئيسي">
         <ul className="space-y-1">
           {visibleItems.map((item) => {
             const Icon = item.icon;
@@ -97,6 +163,7 @@ export function AppSidebar() {
               <li key={item.to}>
                 <Link
                   to={item.to}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
@@ -115,6 +182,7 @@ export function AppSidebar() {
       <div className="border-t border-sidebar-border px-3 py-4">
         <Link
           to="/units"
+          onClick={onNavigate}
           className="mb-3 flex items-center gap-2 rounded-lg bg-white/7 px-3 py-2 text-xs font-semibold text-sidebar-foreground/75 transition hover:bg-white/12"
         >
           <UserRound className="h-4 w-4 text-cyan-200" /> معاينة بوابة الزائر
@@ -127,13 +195,13 @@ export function AppSidebar() {
         </div>
         <button
           type="button"
-          onClick={() => void signOut()}
+          onClick={onSignOut}
           className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-destructive/20 hover:text-destructive-foreground"
         >
           <LogOut className="h-4 w-4" />
           <span>تسجيل الخروج</span>
         </button>
       </div>
-    </aside>
+    </div>
   );
 }

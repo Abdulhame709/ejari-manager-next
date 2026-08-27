@@ -25,6 +25,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as UnitsRouteImport } from './routes/units'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as AdminPaymentRequestsRouteImport } from './routes/admin/payment-requests'
+import { Route as InvoicesPrintBatchRouteImport } from './routes/invoices_.print-batch'
 import { Route as ShopsIndexRouteImport } from './routes/shops/index'
 import { Route as TenantIndexRouteImport } from './routes/tenant/index'
 import { Route as TenantInvoicesRouteImport } from './routes/tenant/invoices'
@@ -115,6 +116,11 @@ const AdminPaymentRequestsRoute = AdminPaymentRequestsRouteImport.update({
   path: '/admin/payment-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvoicesPrintBatchRoute = InvoicesPrintBatchRouteImport.update({
+  id: '/invoices_/print-batch',
+  path: '/invoices/print-batch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopsIndexRoute = ShopsIndexRouteImport.update({
   id: '/shops/',
   path: '/shops/',
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/units': typeof UnitsRoute
   '/users': typeof UsersRoute
   '/admin/payment-requests': typeof AdminPaymentRequestsRoute
+  '/invoices/print-batch': typeof InvoicesPrintBatchRoute
   '/tenant/invoices': typeof TenantInvoicesRoute
   '/tenant/login': typeof TenantLoginRoute
   '/tenant/payments': typeof TenantPaymentsRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/units': typeof UnitsRoute
   '/users': typeof UsersRoute
   '/admin/payment-requests': typeof AdminPaymentRequestsRoute
+  '/invoices/print-batch': typeof InvoicesPrintBatchRoute
   '/tenant/invoices': typeof TenantInvoicesRoute
   '/tenant/login': typeof TenantLoginRoute
   '/tenant/payments': typeof TenantPaymentsRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/units': typeof UnitsRoute
   '/users': typeof UsersRoute
   '/admin/payment-requests': typeof AdminPaymentRequestsRoute
+  '/invoices_/print-batch': typeof InvoicesPrintBatchRoute
   '/tenant/invoices': typeof TenantInvoicesRoute
   '/tenant/login': typeof TenantLoginRoute
   '/tenant/payments': typeof TenantPaymentsRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/units'
     | '/users'
     | '/admin/payment-requests'
+    | '/invoices/print-batch'
     | '/tenant/invoices'
     | '/tenant/login'
     | '/tenant/payments'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/units'
     | '/users'
     | '/admin/payment-requests'
+    | '/invoices/print-batch'
     | '/tenant/invoices'
     | '/tenant/login'
     | '/tenant/payments'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/units'
     | '/users'
     | '/admin/payment-requests'
+    | '/invoices_/print-batch'
     | '/tenant/invoices'
     | '/tenant/login'
     | '/tenant/payments'
@@ -344,6 +356,7 @@ export interface RootRouteChildren {
   UnitsRoute: typeof UnitsRoute
   UsersRoute: typeof UsersRoute
   AdminPaymentRequestsRoute: typeof AdminPaymentRequestsRoute
+  InvoicesPrintBatchRoute: typeof InvoicesPrintBatchRoute
   TenantInvoicesRoute: typeof TenantInvoicesRoute
   TenantLoginRoute: typeof TenantLoginRoute
   TenantPaymentsRoute: typeof TenantPaymentsRoute
@@ -469,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPaymentRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invoices_/print-batch': {
+      id: '/invoices_/print-batch'
+      path: '/invoices/print-batch'
+      fullPath: '/invoices/print-batch'
+      preLoaderRoute: typeof InvoicesPrintBatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shops/': {
       id: '/shops/'
       path: '/shops'
@@ -552,6 +572,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnitsRoute: UnitsRoute,
   UsersRoute: UsersRoute,
   AdminPaymentRequestsRoute: AdminPaymentRequestsRoute,
+  InvoicesPrintBatchRoute: InvoicesPrintBatchRoute,
   TenantInvoicesRoute: TenantInvoicesRoute,
   TenantLoginRoute: TenantLoginRoute,
   TenantPaymentsRoute: TenantPaymentsRoute,

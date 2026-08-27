@@ -7,6 +7,7 @@ import { RouteGuard } from "@/components/route-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -51,7 +52,7 @@ import { canDeleteOperationalRecords, PAGE_ROLES } from "@/lib/access-control";
 import { format } from "date-fns";
 import { formatMoney } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
-import { sanitizeSearchTerm } from "@/lib/utils";
+import { getErrorMessage, sanitizeSearchTerm } from "@/lib/utils";
 import {
   InvoiceNotificationDialog,
   type InvoiceNotificationData,
@@ -161,6 +162,8 @@ const ARABIC_MONTHS = [
   "ديسمبر",
 ];
 const PAGE_SIZE = 30;
+const MAX_BATCH_PRINT_SELECTION = 120;
+type InvoiceSort = "invoice_no" | "invoice_date" | "total_amount" | "remaining_amount";
 
 function InvoicesPage() {
   const { role } = useAuth();
@@ -170,6 +173,9 @@ function InvoicesPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "partial" | "paid">("all");
+  const [sortBy, setSortBy] = useState<InvoiceSort>("invoice_no");
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const [isSelectingFiltered, setIsSelectingFiltered] = useState(false);
   const [page, setPage] = useState(0);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [detailsInv, setDetailsInv] = useState<Invoice | null>(null);
@@ -192,7 +198,7 @@ function InvoicesPage() {
 
   // Invoices for selected month
   const { data, isLoading } = useQuery({
-    queryKey: ["invoices", month, year, search, statusFilter, page],
+    queryKey: ["invoices", month, year, search, statusFilter, sortBy, page],
     queryFn: async () => {
       let q = supabase
         .from("invoices")
@@ -208,7 +214,10 @@ function InvoicesPage() {
         );
       }
       if (statusFilter !== "all") q = q.eq("payment_status", statusFilter);
-      q = q.order("invoice_no").range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      q = q
+        .order(sortBy, { ascending: sortBy === "invoice_no" })
+        .order("invoice_no", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       const { data, count, error } = await q;
       if (error) throw error;
       return { invoices: (data ?? []) as unknown as Invoice[], total: count ?? 0 };
@@ -218,6 +227,75 @@ function InvoicesPage() {
   const invoices = useMemo(() => data?.invoices ?? [], [data]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
+  const selectedInvoicesOnPage = invoices.filter((invoice) =>
+    selectedInvoiceIds.includes(invoice.id),
+  );
+  const allInvoicesOnPageSelected =
+    invoices.length > 0 && selectedInvoicesOnPage.length === invoices.length;
+
+  function addInvoiceIds(current: string[], additionalIds: string[]) {
+    const result = [...new Set([...current, ...additionalIds])];
+    if (result.length > MAX_BATCH_PRINT_SELECTION) {
+      toast.error(`حد الطباعة الجماعية هو ${MAX_BATCH_PRINT_SELECTION} فاتورة في الدفعة الواحدة.`);
+      return result.slice(0, MAX_BATCH_PRINT_SELECTION);
+    }
+    return result;
+  }
+
+  function toggleInvoiceSelection(invoiceId: string, checked: boolean) {
+    setSelectedInvoiceIds((current) =>
+      checked ? addInvoiceIds(current, [invoiceId]) : current.filter((id) => id !== invoiceId),
+    );
+  }
+
+  function toggleCurrentPageSelection(checked: boolean) {
+    const currentPageIds = invoices.map((invoice) => invoice.id);
+    setSelectedInvoiceIds((current) =>
+      checked
+        ? addInvoiceIds(current, currentPageIds)
+        : current.filter((id) => !currentPageIds.includes(id)),
+    );
+  }
+
+  async function selectAllFilteredInvoices() {
+    setIsSelectingFiltered(true);
+    try {
+      let query = supabase
+        .from("invoices")
+        .select("id")
+        .eq("invoice_month", month)
+        .eq("invoice_year", year);
+      if (search.trim()) {
+        const safeSearch = sanitizeSearchTerm(search);
+        query = query.or(
+          `invoice_no.ilike.%${safeSearch}%,customers.full_name.ilike.%${safeSearch}%,shops.shop_code.ilike.%${safeSearch}%`,
+        );
+      }
+      if (statusFilter !== "all") query = query.eq("payment_status", statusFilter);
+      const { data: matching, error } = await query
+        .order(sortBy, { ascending: sortBy === "invoice_no" })
+        .order("invoice_no", { ascending: true })
+        .limit(MAX_BATCH_PRINT_SELECTION);
+      if (error) throw error;
+      setSelectedInvoiceIds((current) =>
+        addInvoiceIds(
+          current,
+          (matching ?? []).map((row) => row.id),
+        ),
+      );
+      toast.success(`تم تحديد ${(matching ?? []).length} فاتورة وفق الفلاتر الحالية.`);
+    } catch (error) {
+      toast.error("تعذر تحديد نتائج الفلترة: " + getErrorMessage(error, "حدث خطأ غير متوقع"));
+    } finally {
+      setIsSelectingFiltered(false);
+    }
+  }
+
+  function openBatchPrint() {
+    if (!selectedInvoiceIds.length) return;
+    const query = new URLSearchParams({ ids: selectedInvoiceIds.join(",") });
+    window.open(`/invoices/print-batch?${query.toString()}`, "_blank", "noopener,noreferrer");
+  }
 
   // Stats
   const stats = useMemo(() => {
@@ -388,9 +466,10 @@ function InvoicesPage() {
               />
               <select
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as "all" | "unpaid" | "paid" | "partial")
-                }
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as "all" | "unpaid" | "paid" | "partial");
+                  setPage(0);
+                }}
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 <option value="all">الكل</option>
@@ -398,6 +477,47 @@ function InvoicesPage() {
                 <option value="partial">جزئي</option>
                 <option value="paid">مدفوعة</option>
               </select>
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <select
+              value={sortBy}
+              onChange={(event) => {
+                setSortBy(event.target.value as InvoiceSort);
+                setPage(0);
+              }}
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              aria-label="ترتيب قائمة الفواتير"
+            >
+              <option value="invoice_no">ترتيب حسب رقم الفاتورة</option>
+              <option value="invoice_date">الأحدث إصداراً أولاً</option>
+              <option value="total_amount">الأعلى إجمالاً أولاً</option>
+              <option value="remaining_amount">الأعلى المتبقي أولاً</option>
+            </select>
+            <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+              <span className="text-xs font-semibold text-muted-foreground">
+                {selectedInvoiceIds.length
+                  ? `${selectedInvoiceIds.length} محددة للطباعة`
+                  : "حدد الفواتير المراد طباعتها"}
+              </span>
+              {selectedInvoiceIds.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => setSelectedInvoiceIds([])}>
+                  إلغاء التحديد
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isSelectingFiltered}
+                onClick={() => void selectAllFilteredInvoices()}
+              >
+                {isSelectingFiltered ? <Loader2 className="ml-1 h-4 w-4 animate-spin" /> : null}
+                تحديد نتائج الفلترة
+              </Button>
+              <Button size="sm" disabled={!selectedInvoiceIds.length} onClick={openBatchPrint}>
+                <Printer className="ml-1 h-4 w-4" />
+                طباعة جماعية
+              </Button>
             </div>
           </div>
         </Card>
@@ -410,7 +530,7 @@ function InvoicesPage() {
           ) : invoices.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground">
               <Receipt className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>لا توجد فواتير في هذا الشهر</p>
+              <p>لا توجد فواتير مطابقة لخيارات البحث الحالية</p>
               <Button size="sm" className="mt-4" onClick={() => setGenerateOpen(true)}>
                 <Plus className="h-4 w-4 ml-1" />
                 إنشاء الفواتير
@@ -418,9 +538,16 @@ function InvoicesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="min-w-[940px] w-full text-sm">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
+                    <th className="w-10 px-3 py-2 text-center">
+                      <Checkbox
+                        checked={allInvoicesOnPageSelected}
+                        onCheckedChange={(checked) => toggleCurrentPageSelection(checked === true)}
+                        aria-label="تحديد كل فواتير الصفحة"
+                      />
+                    </th>
                     <th className="px-3 py-2 text-right">رقم الفاتورة</th>
                     <th className="px-3 py-2 text-right">الوحدة / المستأجر</th>
                     <th className="px-3 py-2 text-center">الإيجار</th>
@@ -435,7 +562,19 @@ function InvoicesPage() {
                 </thead>
                 <tbody>
                   {invoices.map((inv) => (
-                    <tr key={inv.id} className="border-t hover:bg-muted/30">
+                    <tr
+                      key={inv.id}
+                      className={`border-t hover:bg-muted/30 ${selectedInvoiceIds.includes(inv.id) ? "bg-primary/5" : ""}`}
+                    >
+                      <td className="px-3 py-2 text-center">
+                        <Checkbox
+                          checked={selectedInvoiceIds.includes(inv.id)}
+                          onCheckedChange={(checked) =>
+                            toggleInvoiceSelection(inv.id, checked === true)
+                          }
+                          aria-label={`تحديد الفاتورة ${inv.invoice_no}`}
+                        />
+                      </td>
                       <td className="px-3 py-2 font-mono text-xs">{inv.invoice_no}</td>
                       <td className="px-3 py-2">
                         <div className="font-medium">{inv.customers?.full_name}</div>
