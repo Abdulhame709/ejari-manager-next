@@ -317,9 +317,19 @@ function ReceiptsPage() {
                       </td>
                       <td className="px-3 py-2 text-center">
                         <Badge
-                          variant={r.status === "posted" ? "default" : r.status === "reversal" ? "secondary" : "destructive"}
+                          variant={
+                            r.status === "posted"
+                              ? "default"
+                              : r.status === "reversal"
+                                ? "secondary"
+                                : "destructive"
+                          }
                         >
-                          {r.status === "posted" ? "مرحل" : r.status === "reversal" ? "سند عكسي" : "ملغى"}
+                          {r.status === "posted"
+                            ? "مرحل"
+                            : r.status === "reversal"
+                              ? "سند عكسي"
+                              : "ملغى"}
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -426,8 +436,8 @@ function ReceiptsPage() {
                 <DialogTitle>سند قبض {details.receipt_no}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
                     <div className="text-xs text-muted-foreground">المستأجر</div>
                     <div className="font-medium">{details.customers?.full_name}</div>
                   </div>
@@ -447,9 +457,19 @@ function ReceiptsPage() {
                 <div>
                   <div className="text-xs text-muted-foreground">حالة السند</div>
                   <Badge
-                    variant={details.status === "posted" ? "default" : details.status === "reversal" ? "secondary" : "destructive"}
+                    variant={
+                      details.status === "posted"
+                        ? "default"
+                        : details.status === "reversal"
+                          ? "secondary"
+                          : "destructive"
+                    }
                   >
-                    {details.status === "posted" ? "مرحل" : details.status === "reversal" ? "سند عكسي" : "ملغى"}
+                    {details.status === "posted"
+                      ? "مرحل"
+                      : details.status === "reversal"
+                        ? "سند عكسي"
+                        : "ملغى"}
                   </Badge>
                 </div>
                 {details.bank_name && (
@@ -534,13 +554,16 @@ function ReceiptsPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!receiptToReverse} onOpenChange={(isOpen) => !isOpen && setReceiptToReverse(null)}>
+      <AlertDialog
+        open={!!receiptToReverse}
+        onOpenChange={(isOpen) => !isOpen && setReceiptToReverse(null)}
+      >
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>تأكيد عكس سند القبض</AlertDialogTitle>
             <AlertDialogDescription>
-              سيُلغى السند {receiptToReverse?.receipt_no} ويُنشأ سجل عكسي مرتبط به، ثم تُعاد
-              احتساب الأرصدة وحالات الفواتير المرتبطة. لا يمكن التراجع عن هذه العملية من الواجهة.
+              سيُلغى السند {receiptToReverse?.receipt_no} ويُنشأ سجل عكسي مرتبط به، ثم تُعاد احتساب
+              الأرصدة وحالات الفواتير المرتبطة. لا يمكن التراجع عن هذه العملية من الواجهة.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
@@ -568,7 +591,11 @@ function ReceiptsPage() {
                 }
               }}
             >
-              {reverseReceiptMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : <RotateCcw className="h-4 w-4 ml-1" />}
+              {reverseReceiptMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-1" />
+              ) : (
+                <RotateCcw className="h-4 w-4 ml-1" />
+              )}
               تأكيد العكس
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -424,11 +424,21 @@ function ContractsList() {
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(c)} title="تعديل العقد">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEdit(c)}
+                          title="تعديل العقد"
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         {canDelete && (c.status === "active" || c.status === "expired") && (
-                          <Button size="icon" variant="ghost" onClick={() => openRenew(c)} title="تجديد العقد">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openRenew(c)}
+                            title="تجديد العقد"
+                          >
                             <RefreshCw className="h-3.5 w-3.5 text-primary" />
                           </Button>
                         )}
@@ -651,7 +661,8 @@ function ContractsList() {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
                 <div className="font-bold">الوحدة والمستأجر</div>
                 <div className="mt-1 text-muted-foreground">
-                  {renewTarget?.shops?.shop_code} — {renewTarget?.shops?.shop_name} · {renewTarget?.customers?.full_name}
+                  {renewTarget?.shops?.shop_code} — {renewTarget?.shops?.shop_name} ·{" "}
+                  {renewTarget?.customers?.full_name}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -659,7 +670,11 @@ function ContractsList() {
                   <Label>رقم العقد الجديد *</Label>
                   <Input
                     value={renewalForm.contract_no}
-                    onChange={(event) => setRenewalForm((form) => form ? { ...form, contract_no: event.target.value } : form)}
+                    onChange={(event) =>
+                      setRenewalForm((form) =>
+                        form ? { ...form, contract_no: event.target.value } : form,
+                      )
+                    }
                     required
                   />
                 </div>
@@ -668,8 +683,16 @@ function ContractsList() {
                   <Input
                     type="date"
                     value={renewalForm.start_date}
-                    min={renewTarget ? toIsoDate(new Date(`${renewTarget.end_date}T00:00:00.000Z`)) : undefined}
-                    onChange={(event) => setRenewalForm((form) => form ? { ...form, start_date: event.target.value } : form)}
+                    min={
+                      renewTarget
+                        ? toIsoDate(new Date(`${renewTarget.end_date}T00:00:00.000Z`))
+                        : undefined
+                    }
+                    onChange={(event) =>
+                      setRenewalForm((form) =>
+                        form ? { ...form, start_date: event.target.value } : form,
+                      )
+                    }
                     required
                   />
                 </div>
@@ -681,7 +704,11 @@ function ContractsList() {
                     type="date"
                     value={renewalForm.end_date}
                     min={renewalForm.start_date}
-                    onChange={(event) => setRenewalForm((form) => form ? { ...form, end_date: event.target.value } : form)}
+                    onChange={(event) =>
+                      setRenewalForm((form) =>
+                        form ? { ...form, end_date: event.target.value } : form,
+                      )
+                    }
                     required
                   />
                 </div>
@@ -692,7 +719,11 @@ function ContractsList() {
                     min="0"
                     step="0.01"
                     value={renewalForm.monthly_rent}
-                    onChange={(event) => setRenewalForm((form) => form ? { ...form, monthly_rent: event.target.value } : form)}
+                    onChange={(event) =>
+                      setRenewalForm((form) =>
+                        form ? { ...form, monthly_rent: event.target.value } : form,
+                      )
+                    }
                     required
                   />
                 </div>
@@ -705,7 +736,11 @@ function ContractsList() {
                     min="0"
                     step="0.01"
                     value={renewalForm.holiday_increase}
-                    onChange={(event) => setRenewalForm((form) => form ? { ...form, holiday_increase: event.target.value } : form)}
+                    onChange={(event) =>
+                      setRenewalForm((form) =>
+                        form ? { ...form, holiday_increase: event.target.value } : form,
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -715,7 +750,11 @@ function ContractsList() {
                     min="0"
                     step="0.01"
                     value={renewalForm.insurance_amount}
-                    onChange={(event) => setRenewalForm((form) => form ? { ...form, insurance_amount: event.target.value } : form)}
+                    onChange={(event) =>
+                      setRenewalForm((form) =>
+                        form ? { ...form, insurance_amount: event.target.value } : form,
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -724,7 +763,9 @@ function ContractsList() {
                 <Textarea
                   rows={3}
                   value={renewalForm.notes}
-                  onChange={(event) => setRenewalForm((form) => form ? { ...form, notes: event.target.value } : form)}
+                  onChange={(event) =>
+                    setRenewalForm((form) => (form ? { ...form, notes: event.target.value } : form))
+                  }
                 />
               </div>
               <DialogFooter className="gap-2">

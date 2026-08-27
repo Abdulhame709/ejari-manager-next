@@ -575,14 +575,14 @@ function ShopsPage() {
           "اسم الوحدة": "shop_name",
           "اسم المحل": "shop_name",
           "اسم العقار": "property_name",
-          "العقار": "property_name",
+          العقار: "property_name",
           "نوع الوحدة": "unit_type",
-          "الحالة": "status",
+          الحالة: "status",
           "الإيجار الشهري": "monthly_rent",
-          "المساحة": "area_sqm",
+          المساحة: "area_sqm",
           "نوع عداد الكهرباء": "elec_meter_type",
           "نوع عداد الماء": "water_meter_type",
-          "الوصف": "description",
+          الوصف: "description",
         }}
         previewColumns={["shop_code", "shop_name", "property_name", "unit_type", "monthly_rent"]}
         parseRow={(row, rowNumber) => {
@@ -590,7 +590,9 @@ function ShopsPage() {
           const name = row.shop_name?.trim();
           const propertyName = row.property_name?.trim();
           const property = propertyName
-            ? properties.find((item) => item.name.trim().toLocaleLowerCase() === propertyName.toLocaleLowerCase())
+            ? properties.find(
+                (item) => item.name.trim().toLocaleLowerCase() === propertyName.toLocaleLowerCase(),
+              )
             : null;
           const rent = Number(row.monthly_rent || 0);
           const area = Number(row.area_sqm || 0);
@@ -600,7 +602,9 @@ function ShopsPage() {
           const statuses = ["available", "rented", "reserved", "maintenance", "inactive"];
           if (!code || !name) return { error: `السطر ${rowNumber}: كود الوحدة والاسم مطلوبان` };
           if (propertyName && !property)
-            return { error: `السطر ${rowNumber}: العقار «${propertyName}» غير موجود؛ استورده أولاً أو اترك الحقل فارغاً` };
+            return {
+              error: `السطر ${rowNumber}: العقار «${propertyName}» غير موجود؛ استورده أولاً أو اترك الحقل فارغاً`,
+            };
           if (
             Number.isNaN(rent) ||
             rent < 0 ||

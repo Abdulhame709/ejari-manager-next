@@ -59,7 +59,9 @@ export function ReceiptNotificationDialog({
   const whatsappHref = hasRecipient
     ? `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
     : undefined;
-  const smsHref = hasRecipient ? `sms:${normalizedPhone}?body=${encodeURIComponent(message)}` : undefined;
+  const smsHref = hasRecipient
+    ? `sms:${normalizedPhone}?body=${encodeURIComponent(message)}`
+    : undefined;
 
   async function copyMessage() {
     try {
@@ -85,10 +87,18 @@ export function ReceiptNotificationDialog({
 
         {receipt && (
           <div className="grid gap-2 rounded-lg border bg-muted/35 p-3 text-sm sm:grid-cols-2">
-            <span><strong>السند:</strong> {receipt.receiptNo}</span>
-            <span><strong>المستأجر:</strong> {receipt.customerName}</span>
-            <span><strong>التاريخ:</strong> {receipt.receiptDate}</span>
-            <span><strong>المبلغ:</strong> {formatMoney(receipt.amount)}</span>
+            <span>
+              <strong>السند:</strong> {receipt.receiptNo}
+            </span>
+            <span>
+              <strong>المستأجر:</strong> {receipt.customerName}
+            </span>
+            <span>
+              <strong>التاريخ:</strong> {receipt.receiptDate}
+            </span>
+            <span>
+              <strong>المبلغ:</strong> {formatMoney(receipt.amount)}
+            </span>
           </div>
         )}
 
@@ -126,19 +136,34 @@ export function ReceiptNotificationDialog({
         )}
 
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-start">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            إغلاق
+          </Button>
           <Button type="button" variant="outline" disabled={!smsHref} asChild={!!smsHref}>
             {smsHref ? (
-              <a href={smsHref}><MessageSquareText className="ml-1 h-4 w-4" /> فتح تطبيق SMS</a>
+              <a href={smsHref}>
+                <MessageSquareText className="ml-1 h-4 w-4" /> فتح تطبيق SMS
+              </a>
             ) : (
-              <span><MessageSquareText className="ml-1 inline h-4 w-4" /> فتح تطبيق SMS</span>
+              <span>
+                <MessageSquareText className="ml-1 inline h-4 w-4" /> فتح تطبيق SMS
+              </span>
             )}
           </Button>
-          <Button type="button" className="bg-emerald-600 hover:bg-emerald-700" disabled={!whatsappHref} asChild={!!whatsappHref}>
+          <Button
+            type="button"
+            className="bg-emerald-600 hover:bg-emerald-700"
+            disabled={!whatsappHref}
+            asChild={!!whatsappHref}
+          >
             {whatsappHref ? (
-              <a href={whatsappHref} target="_blank" rel="noreferrer"><ExternalLink className="ml-1 h-4 w-4" /> فتح واتساب</a>
+              <a href={whatsappHref} target="_blank" rel="noreferrer">
+                <ExternalLink className="ml-1 h-4 w-4" /> فتح واتساب
+              </a>
             ) : (
-              <span><ExternalLink className="ml-1 inline h-4 w-4" /> فتح واتساب</span>
+              <span>
+                <ExternalLink className="ml-1 inline h-4 w-4" /> فتح واتساب
+              </span>
             )}
           </Button>
         </DialogFooter>

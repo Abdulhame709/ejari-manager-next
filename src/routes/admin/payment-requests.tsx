@@ -70,7 +70,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function AdminPaymentRequests() {
-  const [statusFilter, setStatusFilter] = useState<"all" | PaymentRequest["status"]>("pending_review");
+  const [statusFilter, setStatusFilter] = useState<"all" | PaymentRequest["status"]>(
+    "pending_review",
+  );
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [viewId, setViewId] = useState<PaymentRequest | null>(null);

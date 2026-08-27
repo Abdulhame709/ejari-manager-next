@@ -282,7 +282,8 @@ function InvoicePrintPage() {
 
       {invoice.remaining_amount > 0.01 ? (
         <PrintNotice title="تنبيه استحقاق" tone="amber">
-          يرجى سداد الرصيد المتبقي وقدره <PrintMoney value={invoice.remaining_amount} settings={settings} /> في أقرب وقت ممكن
+          يرجى سداد الرصيد المتبقي وقدره{" "}
+          <PrintMoney value={invoice.remaining_amount} settings={settings} /> في أقرب وقت ممكن
           {invoice.due_date ? `، وموعد الاستحقاق هو ${formatDate(invoice.due_date)}.` : "."}
         </PrintNotice>
       ) : (

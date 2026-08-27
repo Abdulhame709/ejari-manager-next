@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:financial": "node scripts/verify-financial-invariants.mjs",
-    "check": "npm run lint && npm run typecheck && npm run test:financial && npm run build",
+    "test:security": "node scripts/verify-security-invariants.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test:financial && npm run test:security && npm run build",
     "format": "prettier --write ."
   },
   "dependencies": {

@@ -52,7 +52,9 @@ export function InvoiceNotificationDialog({
   const whatsappHref = hasRecipient
     ? `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
     : undefined;
-  const smsHref = hasRecipient ? `sms:${normalizedPhone}?body=${encodeURIComponent(message)}` : undefined;
+  const smsHref = hasRecipient
+    ? `sms:${normalizedPhone}?body=${encodeURIComponent(message)}`
+    : undefined;
 
   async function copyMessage() {
     try {
@@ -72,17 +74,26 @@ export function InvoiceNotificationDialog({
             إشعار فاتورة للمستأجر
           </DialogTitle>
           <DialogDescription>
-            راجع الرقم والنص أولاً. لن تُرسل أي رسالة تلقائياً؛ يفتح الزر التطبيق المختار لتراجع الإرسال وتؤكده بنفسك.
+            راجع الرقم والنص أولاً. لن تُرسل أي رسالة تلقائياً؛ يفتح الزر التطبيق المختار لتراجع
+            الإرسال وتؤكده بنفسك.
           </DialogDescription>
         </DialogHeader>
 
         {invoice && (
           <div className="rounded-lg border bg-muted/35 p-3 text-sm">
             <div className="grid gap-2 sm:grid-cols-2">
-              <span><strong>الفاتورة:</strong> {invoice.invoiceNo}</span>
-              <span><strong>المستأجر:</strong> {invoice.customerName}</span>
-              <span><strong>الوحدة:</strong> {invoice.shopName}</span>
-              <span><strong>المتبقي:</strong> {formatMoney(invoice.remainingAmount)}</span>
+              <span>
+                <strong>الفاتورة:</strong> {invoice.invoiceNo}
+              </span>
+              <span>
+                <strong>المستأجر:</strong> {invoice.customerName}
+              </span>
+              <span>
+                <strong>الوحدة:</strong> {invoice.shopName}
+              </span>
+              <span>
+                <strong>المتبقي:</strong> {formatMoney(invoice.remainingAmount)}
+              </span>
             </div>
           </div>
         )}
@@ -98,7 +109,8 @@ export function InvoiceNotificationDialog({
             placeholder="مثال: 777123456 أو +967777123456"
           />
           <p className="text-xs text-muted-foreground">
-            يتم تحويل الرقم اليمني المحلي الذي يبدأ بـ 7 تلقائياً إلى صيغة واتساب الدولية +967. عدّل الرقم عند الحاجة قبل الإرسال.
+            يتم تحويل الرقم اليمني المحلي الذي يبدأ بـ 7 تلقائياً إلى صيغة واتساب الدولية +967. عدّل
+            الرقم عند الحاجة قبل الإرسال.
           </p>
         </div>
 
@@ -133,16 +145,25 @@ export function InvoiceNotificationDialog({
                 <MessageSquareText className="ml-1 h-4 w-4" /> فتح تطبيق SMS
               </a>
             ) : (
-              <span><MessageSquareText className="ml-1 inline h-4 w-4" /> فتح تطبيق SMS</span>
+              <span>
+                <MessageSquareText className="ml-1 inline h-4 w-4" /> فتح تطبيق SMS
+              </span>
             )}
           </Button>
-          <Button type="button" className="bg-emerald-600 hover:bg-emerald-700" disabled={!whatsappHref} asChild={!!whatsappHref}>
+          <Button
+            type="button"
+            className="bg-emerald-600 hover:bg-emerald-700"
+            disabled={!whatsappHref}
+            asChild={!!whatsappHref}
+          >
             {whatsappHref ? (
               <a href={whatsappHref} target="_blank" rel="noreferrer">
                 <ExternalLink className="ml-1 h-4 w-4" /> فتح واتساب
               </a>
             ) : (
-              <span><ExternalLink className="ml-1 inline h-4 w-4" /> فتح واتساب</span>
+              <span>
+                <ExternalLink className="ml-1 inline h-4 w-4" /> فتح واتساب
+              </span>
             )}
           </Button>
         </DialogFooter>
@@ -153,9 +174,10 @@ export function InvoiceNotificationDialog({
 
 function buildInvoiceMessage(invoice: InvoiceNotificationData) {
   const dueDateText = invoice.dueDate ? ` موعد الاستحقاق: ${invoice.dueDate}.` : "";
-  const balanceText = invoice.remainingAmount > 0
-    ? ` المبلغ المتبقي: ${formatMoney(invoice.remainingAmount)}.`
-    : " الفاتورة مسددة بالكامل.";
+  const balanceText =
+    invoice.remainingAmount > 0
+      ? ` المبلغ المتبقي: ${formatMoney(invoice.remainingAmount)}.`
+      : " الفاتورة مسددة بالكامل.";
 
   return `عزيزي/عزيزتي ${invoice.customerName}، فاتورة الوحدة ${invoice.shopName} لشهر ${invoice.monthLabel} برقم ${invoice.invoiceNo} بإجمالي ${formatMoney(invoice.totalAmount)}.${balanceText}${dueDateText} يرجى السداد في أقرب وقت ممكن. إدارة إيجاري.`;
 }

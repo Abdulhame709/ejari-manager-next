@@ -12,13 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isStaffRole } from "@/lib/access-control";
 
 export type AppRole =
-  | "admin"
-  | "manager"
-  | "accountant"
-  | "data_entry"
-  | "viewer"
-  | "tenant"
-  | "visitor";
+  "admin" | "manager" | "accountant" | "data_entry" | "viewer" | "tenant" | "visitor";
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   admin: "مدير النظام",

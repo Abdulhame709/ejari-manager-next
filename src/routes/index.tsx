@@ -358,93 +358,31 @@ interface DashboardStats {
 
 async function fetchStats(): Promise<DashboardStats> {
   const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  const in30days = new Date();
-  in30days.setDate(in30days.getDate() + 30);
-  const firstOfNextMonth = new Date(year, month, 1);
-  const lastDay = new Date(firstOfNextMonth.getTime() - 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-  const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
+  const { data, error } = await supabase.rpc("get_dashboard_stats", {
+    p_month: now.getMonth() + 1,
+    p_year: now.getFullYear(),
+  });
 
-  const [
-    shopsAll,
-    shopsActive,
-    activeShopRows,
-    currentMonthReadings,
-    customers,
-    contracts,
-    invoicesThisMonth,
-    invoicesUnpaid,
-    invoicesPaid,
-    expiring,
-    receiptsThisMonth,
-  ] = await Promise.all([
-    supabase.from("shops").select("id", { count: "exact", head: true }),
-    supabase.from("shops").select("id", { count: "exact", head: true }).eq("is_active", true),
-    supabase.from("shops").select("id").eq("is_active", true),
-    supabase.from("meter_readings").select("shop_id").eq("reading_month", month).eq("reading_year", year),
-    supabase.from("customers").select("id", { count: "exact", head: true }).eq("is_active", true),
-    supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "active"),
-    supabase
-      .from("invoices")
-      .select("total_amount, remaining_amount", { count: "exact" })
-      .eq("invoice_month", month)
-      .eq("invoice_year", year)
-      .neq("status", "cancelled"),
-    supabase
-      .from("invoices")
-      .select("remaining_amount", { count: "exact" })
-      .in("payment_status", ["unpaid", "partial"])
-      .neq("status", "cancelled"),
-    supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("payment_status", "paid")
-      .neq("status", "cancelled"),
-    supabase
-      .from("contracts")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "active")
-      .gte("end_date", new Date().toISOString().split("T")[0])
-      .lte("end_date", in30days.toISOString().split("T")[0]),
-    supabase
-      .from("receipts")
-      .select("amount")
-      .gte("receipt_date", firstDay)
-      .lte("receipt_date", lastDay)
-      .eq("is_active", true)
-      .eq("status", "posted"),
-  ]);
+  if (error) throw error;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("تعذر تحميل إحصاءات لوحة التحكم");
+  }
 
-  const readShopIds = new Set((currentMonthReadings.data ?? []).map((reading) => reading.shop_id));
-  const missingReadings = (activeShopRows.data ?? []).filter((shop) => !readShopIds.has(shop.id)).length;
-  const thisMonthRevenue = (invoicesThisMonth.data ?? []).reduce(
-    (s, i) => s + Number(i.total_amount ?? 0),
-    0,
-  );
-  const totalUnpaid = (invoicesUnpaid.data ?? []).reduce(
-    (s, i) => s + Number(i.remaining_amount ?? 0),
-    0,
-  );
-  const thisMonthCollected = (receiptsThisMonth.data ?? []).reduce(
-    (s, r) => s + Number(r.amount ?? 0),
-    0,
-  );
+  const payload = data as Record<string, unknown>;
+  const numberValue = (key: string) => Number(payload[key] ?? 0);
 
   return {
-    totalShops: shopsAll.count ?? 0,
-    activeShops: shopsActive.count ?? 0,
-    totalCustomers: customers.count ?? 0,
-    activeContracts: contracts.count ?? 0,
-    thisMonthInvoices: invoicesThisMonth.count ?? 0,
-    thisMonthRevenue,
-    thisMonthCollected,
-    totalUnpaid,
-    unpaidInvoicesCount: invoicesUnpaid.count ?? 0,
-    paidInvoicesCount: invoicesPaid.count ?? 0,
-    expiringContracts: expiring.count ?? 0,
-    missingReadings,
+    totalShops: numberValue("total_shops"),
+    activeShops: numberValue("active_shops"),
+    totalCustomers: numberValue("total_customers"),
+    activeContracts: numberValue("active_contracts"),
+    thisMonthInvoices: numberValue("this_month_invoices"),
+    thisMonthRevenue: numberValue("this_month_revenue"),
+    thisMonthCollected: numberValue("this_month_collected"),
+    totalUnpaid: numberValue("total_unpaid"),
+    unpaidInvoicesCount: numberValue("unpaid_invoices_count"),
+    paidInvoicesCount: numberValue("paid_invoices_count"),
+    expiringContracts: numberValue("expiring_contracts"),
+    missingReadings: numberValue("missing_readings"),
   };
 }

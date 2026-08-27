@@ -270,11 +270,11 @@ function PropertiesPage() {
         headerAliases={{
           "اسم العقار": "name",
           "اسم المجمع": "name",
-          "المدينة": "city",
-          "العنوان": "address",
-          "الهاتف": "phone",
-          "الجوال": "phone",
-          "الوصف": "description",
+          المدينة: "city",
+          العنوان: "address",
+          الهاتف: "phone",
+          الجوال: "phone",
+          الوصف: "description",
         }}
         previewColumns={["name", "city", "phone", "address"]}
         parseRow={(row, rowNumber) => {

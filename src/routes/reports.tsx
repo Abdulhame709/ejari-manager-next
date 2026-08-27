@@ -220,7 +220,8 @@ function ReportsPage() {
                   <SelectContent>
                     {statementCustomers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
-                        {customer.full_name}{customer.phone ? ` — ${customer.phone}` : ""}
+                        {customer.full_name}
+                        {customer.phone ? ` — ${customer.phone}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -230,16 +231,16 @@ function ReportsPage() {
               <div className="space-y-1">
                 <Label>الشهر</Label>
                 <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ARABIC_MONTHS.map((m, i) => (
-                    <SelectItem key={i} value={String(i + 1)}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ARABIC_MONTHS.map((m, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             )}
@@ -271,7 +272,11 @@ function ReportsPage() {
               onClick={() => void handleExport()}
               disabled={isExporting || (reportId === "account_statement" && !customerId)}
             >
-              {isExporting ? <Loader2 className="h-4 w-4 ml-1 animate-spin" /> : <Download className="h-4 w-4 ml-1" />}
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 ml-1 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 ml-1" />
+              )}
               تصدير CSV
             </Button>
           </div>
@@ -555,7 +560,11 @@ function CustomerStatementReport({ customerId }: { customerId: string }) {
 
       let runningBalance = 0;
       const entries = [...invoiceEntries, ...receiptEntries]
-        .sort((first, second) => first.date.localeCompare(second.date) || first.reference.localeCompare(second.reference))
+        .sort(
+          (first, second) =>
+            first.date.localeCompare(second.date) ||
+            first.reference.localeCompare(second.reference),
+        )
         .map((entry) => {
           runningBalance += entry.debit - entry.credit;
           return { ...entry, balance: runningBalance } as StatementEntry;
@@ -572,7 +581,9 @@ function CustomerStatementReport({ customerId }: { customerId: string }) {
   });
 
   if (!customerId) {
-    return <p className="text-muted-foreground text-center py-12">اختر مستأجراً لعرض كشف الحساب.</p>;
+    return (
+      <p className="text-muted-foreground text-center py-12">اختر مستأجراً لعرض كشف الحساب.</p>
+    );
   }
   if (isLoading) return <Loader />;
 
@@ -584,8 +595,16 @@ function CustomerStatementReport({ customerId }: { customerId: string }) {
       />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatBox label="إجمالي الفواتير" value={formatMoney(data?.debitTotal ?? 0)} />
-        <StatBox label="إجمالي المقبوضات" value={formatMoney(data?.creditTotal ?? 0)} color="emerald" />
-        <StatBox label="الرصيد المستحق" value={formatMoney(data?.balance ?? 0)} color={(data?.balance ?? 0) > 0 ? "rose" : "blue"} />
+        <StatBox
+          label="إجمالي المقبوضات"
+          value={formatMoney(data?.creditTotal ?? 0)}
+          color="emerald"
+        />
+        <StatBox
+          label="الرصيد المستحق"
+          value={formatMoney(data?.balance ?? 0)}
+          color={(data?.balance ?? 0) > 0 ? "rose" : "blue"}
+        />
       </div>
       <ReportTable columns={["التاريخ", "النوع", "المرجع", "البيان", "مدين", "دائن", "الرصيد"]}>
         {(data?.entries ?? []).map((entry) => (
@@ -594,14 +613,22 @@ function CustomerStatementReport({ customerId }: { customerId: string }) {
             <td className="px-3 py-2">{entry.type === "invoice" ? "فاتورة" : "سند قبض"}</td>
             <td className="px-3 py-2 font-mono text-xs">{entry.reference}</td>
             <td className="px-3 py-2">{entry.description}</td>
-            <td className="px-3 py-2 text-center tabular-nums text-rose-600">{entry.debit ? formatMoney(entry.debit) : "—"}</td>
-            <td className="px-3 py-2 text-center tabular-nums text-emerald-600">{entry.credit ? formatMoney(entry.credit) : "—"}</td>
-            <td className="px-3 py-2 text-center tabular-nums font-bold">{formatMoney(entry.balance)}</td>
+            <td className="px-3 py-2 text-center tabular-nums text-rose-600">
+              {entry.debit ? formatMoney(entry.debit) : "—"}
+            </td>
+            <td className="px-3 py-2 text-center tabular-nums text-emerald-600">
+              {entry.credit ? formatMoney(entry.credit) : "—"}
+            </td>
+            <td className="px-3 py-2 text-center tabular-nums font-bold">
+              {formatMoney(entry.balance)}
+            </td>
           </tr>
         ))}
       </ReportTable>
       {(data?.entries ?? []).length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-8">لا توجد فواتير أو سندات قبض لهذا المستأجر.</p>
+        <p className="text-center text-sm text-muted-foreground py-8">
+          لا توجد فواتير أو سندات قبض لهذا المستأجر.
+        </p>
       )}
     </div>
   );
@@ -821,7 +848,9 @@ function getMonthDateRange(year: number, month: number) {
 }
 
 function csvValue(value: CsvValue) {
-  const normalized = String(value ?? "").replace(/\r?\n/g, " ").trim();
+  const normalized = String(value ?? "")
+    .replace(/\r?\n/g, " ")
+    .trim();
   return `"${normalized.replace(/"/g, '""')}"`;
 }
 
@@ -840,6 +869,29 @@ function downloadCsv(fileName: string, rows: CsvRows) {
 
 function assertQuerySuccess(error: { message: string } | null, fallbackMessage: string) {
   if (error) throw new Error(`${fallbackMessage}: ${error.message}`);
+}
+
+type PagedQueryResult<T> = {
+  data: T[] | null;
+  error: { message: string } | null;
+};
+
+const EXPORT_PAGE_SIZE = 500;
+
+async function fetchAllRows<T>(
+  loadPage: (from: number, to: number) => PromiseLike<PagedQueryResult<T>>,
+  fallbackMessage: string,
+): Promise<T[]> {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += EXPORT_PAGE_SIZE) {
+    const result = await loadPage(from, from + EXPORT_PAGE_SIZE - 1);
+    assertQuerySuccess(result.error, fallbackMessage);
+    const page = result.data ?? [];
+    rows.push(...page);
+
+    if (page.length < EXPORT_PAGE_SIZE) return rows;
+  }
 }
 
 function monthlyFileName(reportId: string, year: number, month: number) {
@@ -861,30 +913,40 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
 
   if (reportId === "revenue") {
     const { start, endExclusive } = getMonthDateRange(year, month);
-    const [invoicesResult, receiptsResult] = await Promise.all([
-      supabase
-        .from("invoices")
-        .select("invoice_no, invoice_date, total_amount, paid_amount, remaining_amount, payment_status")
-        .eq("invoice_month", month)
-        .eq("invoice_year", year)
-        .neq("status", "cancelled")
-        .order("invoice_date"),
-      supabase
-        .from("receipts")
-        .select("receipt_no, receipt_date, amount, payment_method")
-        .gte("receipt_date", start)
-        .lt("receipt_date", endExclusive)
-        .eq("is_active", true)
-        .eq("status", "posted")
-        .order("receipt_date"),
+    const [invoices, receipts] = await Promise.all([
+      fetchAllRows(
+        (from, to) =>
+          supabase
+            .from("invoices")
+            .select(
+              "invoice_no, invoice_date, total_amount, paid_amount, remaining_amount, payment_status",
+            )
+            .eq("invoice_month", month)
+            .eq("invoice_year", year)
+            .neq("status", "cancelled")
+            .order("invoice_date")
+            .range(from, to),
+        "تعذر قراءة الفواتير",
+      ),
+      fetchAllRows(
+        (from, to) =>
+          supabase
+            .from("receipts")
+            .select("receipt_no, receipt_date, amount, payment_method")
+            .gte("receipt_date", start)
+            .lt("receipt_date", endExclusive)
+            .eq("is_active", true)
+            .eq("status", "posted")
+            .order("receipt_date")
+            .range(from, to),
+        "تعذر قراءة سندات القبض",
+      ),
     ]);
-    assertQuerySuccess(invoicesResult.error, "تعذر قراءة الفواتير");
-    assertQuerySuccess(receiptsResult.error, "تعذر قراءة سندات القبض");
-
-    const invoices = invoicesResult.data ?? [];
-    const receipts = receiptsResult.data ?? [];
     const total = invoices.reduce((sum, invoice) => sum + Number(invoice.total_amount || 0), 0);
-    const unpaid = invoices.reduce((sum, invoice) => sum + Number(invoice.remaining_amount || 0), 0);
+    const unpaid = invoices.reduce(
+      (sum, invoice) => sum + Number(invoice.remaining_amount || 0),
+      0,
+    );
     const receiptTotal = receipts.reduce((sum, receipt) => sum + Number(receipt.amount || 0), 0);
     const rows: CsvRows = [
       ...summaryRows("تقرير الإيرادات الشهرية", monthLabel),
@@ -921,23 +983,38 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
   }
 
   if (reportId === "unpaid") {
-    const result = await supabase
-      .from("invoices")
-      .select(
-        "invoice_no, total_amount, paid_amount, remaining_amount, invoice_date, payment_status, shops(shop_code, shop_name), customers(full_name)",
-      )
-      .in("payment_status", ["unpaid", "partial"])
-      .neq("status", "cancelled")
-      .order("remaining_amount", { ascending: false });
-    assertQuerySuccess(result.error, "تعذر قراءة الفواتير غير المسددة");
-    const invoices = (result.data ?? []) as unknown as UnpaidInvoiceRow[];
-    const remainingTotal = invoices.reduce((sum, invoice) => sum + Number(invoice.remaining_amount || 0), 0);
+    const invoices = (await fetchAllRows(
+      (from, to) =>
+        supabase
+          .from("invoices")
+          .select(
+            "invoice_no, total_amount, paid_amount, remaining_amount, invoice_date, payment_status, shops(shop_code, shop_name), customers(full_name)",
+          )
+          .in("payment_status", ["unpaid", "partial"])
+          .neq("status", "cancelled")
+          .order("remaining_amount", { ascending: false })
+          .range(from, to),
+      "تعذر قراءة الفواتير غير المسددة",
+    )) as unknown as UnpaidInvoiceRow[];
+    const remainingTotal = invoices.reduce(
+      (sum, invoice) => sum + Number(invoice.remaining_amount || 0),
+      0,
+    );
     const rows: CsvRows = [
       ...summaryRows("الفواتير غير المسددة", `حتى ${format(new Date(), "yyyy/MM/dd")}`),
       ["إجمالي المتبقي", formatMoney(remainingTotal)],
       ["عدد الفواتير", invoices.length],
       [],
-      ["رقم الفاتورة", "المستأجر", "الوحدة", "التاريخ", "الإجمالي", "المدفوع", "المتبقي", "حالة السداد"],
+      [
+        "رقم الفاتورة",
+        "المستأجر",
+        "الوحدة",
+        "التاريخ",
+        "الإجمالي",
+        "المدفوع",
+        "المتبقي",
+        "حالة السداد",
+      ],
       ...invoices.map((invoice) => [
         invoice.invoice_no,
         invoice.customers?.full_name ?? "",
@@ -957,7 +1034,10 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
   if (reportId === "occupancy") {
     const [unitsResult, contractsResult] = await Promise.all([
       supabase.from("shops").select("id", { count: "exact", head: true }).eq("is_active", true),
-      supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "active"),
+      supabase
+        .from("contracts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active"),
     ]);
     assertQuerySuccess(unitsResult.error, "تعذر قراءة الوحدات");
     assertQuerySuccess(contractsResult.error, "تعذر قراءة العقود");
@@ -966,7 +1046,10 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
     const availableUnits = Math.max(0, totalUnits - rentedUnits);
     const occupancyRate = totalUnits ? Math.round((rentedUnits / totalUnits) * 100) : 0;
     const rows: CsvRows = [
-      ...summaryRows("تقرير الإشغال والحالة العامة", `لقطة حتى ${format(new Date(), "yyyy/MM/dd")}`),
+      ...summaryRows(
+        "تقرير الإشغال والحالة العامة",
+        `لقطة حتى ${format(new Date(), "yyyy/MM/dd")}`,
+      ),
       ["المؤشر", "القيمة"],
       ["إجمالي الوحدات النشطة", totalUnits],
       ["الوحدات المؤجرة بعقود نشطة", rentedUnits],
@@ -979,22 +1062,37 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
   }
 
   if (reportId === "customers") {
-    const [customersResult, invoicesResult] = await Promise.all([
-      supabase.from("customers").select("id, full_name, phone, is_active").eq("is_active", true).order("full_name"),
-      supabase
-        .from("invoices")
-        .select("customer_id, remaining_amount")
-        .in("payment_status", ["unpaid", "partial"])
-        .neq("status", "cancelled"),
+    const [customers, invoices] = await Promise.all([
+      fetchAllRows(
+        (from, to) =>
+          supabase
+            .from("customers")
+            .select("id, full_name, phone, is_active")
+            .eq("is_active", true)
+            .order("full_name")
+            .range(from, to),
+        "تعذر قراءة العملاء",
+      ),
+      fetchAllRows(
+        (from, to) =>
+          supabase
+            .from("invoices")
+            .select("customer_id, remaining_amount")
+            .in("payment_status", ["unpaid", "partial"])
+            .neq("status", "cancelled")
+            .range(from, to),
+        "تعذر قراءة أرصدة العملاء",
+      ),
     ]);
-    assertQuerySuccess(customersResult.error, "تعذر قراءة العملاء");
-    assertQuerySuccess(invoicesResult.error, "تعذر قراءة أرصدة العملاء");
     const balanceMap: Record<string, number> = {};
-    (invoicesResult.data ?? []).forEach((invoice) => {
-      balanceMap[invoice.customer_id] = (balanceMap[invoice.customer_id] ?? 0) + Number(invoice.remaining_amount || 0);
+    invoices.forEach((invoice) => {
+      balanceMap[invoice.customer_id] =
+        (balanceMap[invoice.customer_id] ?? 0) + Number(invoice.remaining_amount || 0);
     });
-    const customers = customersResult.data ?? [];
-    const totalBalance = customers.reduce((sum, customer) => sum + (balanceMap[customer.id] ?? 0), 0);
+    const totalBalance = customers.reduce(
+      (sum, customer) => sum + (balanceMap[customer.id] ?? 0),
+      0,
+    );
     const rows: CsvRows = [
       ...summaryRows("قائمة العملاء والأرصدة", `حتى ${format(new Date(), "yyyy/MM/dd")}`),
       ["عدد العملاء النشطين", customers.length],
@@ -1015,28 +1113,38 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
 
   if (reportId === "account_statement") {
     if (!customerId) throw new Error("اختر المستأجر أولاً لتصدير كشف الحساب");
-    const [customerResult, invoicesResult, receiptsResult] = await Promise.all([
+    const [customerResult, invoices, receipts] = await Promise.all([
       supabase.from("customers").select("id, full_name, phone").eq("id", customerId).single(),
-      supabase
-        .from("invoices")
-        .select("id, invoice_no, invoice_date, total_amount, shops(shop_code, shop_name)")
-        .eq("customer_id", customerId)
-        .neq("status", "cancelled"),
-      supabase
-        .from("receipts")
-        .select("id, receipt_no, receipt_date, amount, payment_method")
-        .eq("customer_id", customerId)
-        .eq("status", "posted")
-        .eq("is_active", true),
+      fetchAllRows(
+        (from, to) =>
+          supabase
+            .from("invoices")
+            .select("id, invoice_no, invoice_date, total_amount, shops(shop_code, shop_name)")
+            .eq("customer_id", customerId)
+            .neq("status", "cancelled")
+            .order("invoice_date")
+            .range(from, to),
+        "تعذر قراءة فواتير المستأجر",
+      ),
+      fetchAllRows(
+        (from, to) =>
+          supabase
+            .from("receipts")
+            .select("id, receipt_no, receipt_date, amount, payment_method")
+            .eq("customer_id", customerId)
+            .eq("status", "posted")
+            .eq("is_active", true)
+            .order("receipt_date")
+            .range(from, to),
+        "تعذر قراءة سندات قبض المستأجر",
+      ),
     ]);
     assertQuerySuccess(customerResult.error, "تعذر قراءة بيانات المستأجر");
-    assertQuerySuccess(invoicesResult.error, "تعذر قراءة فواتير المستأجر");
-    assertQuerySuccess(receiptsResult.error, "تعذر قراءة سندات قبض المستأجر");
 
-    const invoices = (invoicesResult.data ?? []) as unknown as StatementInvoiceRow[];
-    const receipts = (receiptsResult.data ?? []) as unknown as StatementReceiptRow[];
+    const typedInvoices = invoices as unknown as StatementInvoiceRow[];
+    const typedReceipts = receipts as unknown as StatementReceiptRow[];
     const entries = [
-      ...invoices.map((invoice) => ({
+      ...typedInvoices.map((invoice) => ({
         id: invoice.id,
         date: invoice.invoice_date,
         type: "invoice" as const,
@@ -1047,7 +1155,7 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
         debit: Number(invoice.total_amount || 0),
         credit: 0,
       })),
-      ...receipts.map((receipt) => ({
+      ...typedReceipts.map((receipt) => ({
         id: receipt.id,
         date: receipt.receipt_date,
         type: "receipt" as const,
@@ -1057,7 +1165,10 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
         credit: Number(receipt.amount || 0),
       })),
     ]
-      .sort((first, second) => first.date.localeCompare(second.date) || first.reference.localeCompare(second.reference))
+      .sort(
+        (first, second) =>
+          first.date.localeCompare(second.date) || first.reference.localeCompare(second.reference),
+      )
       .map((entry) => ({ ...entry, balance: 0 }));
     let balance = 0;
     entries.forEach((entry) => {
@@ -1069,7 +1180,10 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
     const customer = customerResult.data;
     if (!customer) throw new Error("تعذر العثور على بيانات المستأجر");
     const rows: CsvRows = [
-      ...summaryRows("كشف حساب مستأجر", `${customer.full_name}${customer.phone ? ` — ${customer.phone}` : ""}`),
+      ...summaryRows(
+        "كشف حساب مستأجر",
+        `${customer.full_name}${customer.phone ? ` — ${customer.phone}` : ""}`,
+      ),
       ["إجمالي الفواتير", formatMoney(debitTotal)],
       ["إجمالي المقبوضات المرحلة", formatMoney(creditTotal)],
       ["الرصيد المستحق", formatMoney(balance)],
@@ -1094,22 +1208,29 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
     const in90 = new Date();
     in90.setDate(in90.getDate() + 90);
     const today = new Date().toISOString().slice(0, 10);
-    const result = await supabase
-      .from("contracts")
-      .select("contract_no, end_date, monthly_rent, shops(shop_code, shop_name), customers(full_name)")
-      .eq("status", "active")
-      .lte("end_date", in90.toISOString().slice(0, 10))
-      .gte("end_date", today)
-      .order("end_date");
-    assertQuerySuccess(result.error, "تعذر قراءة العقود القريبة من الانتهاء");
-    const contracts = (result.data ?? []) as unknown as ExpiringContractRow[];
+    const contracts = (await fetchAllRows(
+      (from, to) =>
+        supabase
+          .from("contracts")
+          .select(
+            "contract_no, end_date, monthly_rent, shops(shop_code, shop_name), customers(full_name)",
+          )
+          .eq("status", "active")
+          .lte("end_date", in90.toISOString().slice(0, 10))
+          .gte("end_date", today)
+          .order("end_date")
+          .range(from, to),
+      "تعذر قراءة العقود القريبة من الانتهاء",
+    )) as unknown as ExpiringContractRow[];
     const rows: CsvRows = [
       ...summaryRows("العقود قاربت الانتهاء", "خلال 90 يوماً"),
       ["عدد العقود", contracts.length],
       [],
       ["رقم العقد", "المستأجر", "الوحدة", "تاريخ الانتهاء", "الأيام المتبقية", "الإيجار الشهري"],
       ...contracts.map((contract) => {
-        const days = Math.ceil((new Date(contract.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        const days = Math.ceil(
+          (new Date(contract.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        );
         return [
           contract.contract_no,
           contract.customers?.full_name ?? "",
@@ -1126,24 +1247,41 @@ async function exportReportCSV({ reportId, month, year, customerId }: ReportExpo
   }
 
   if (reportId === "readings") {
-    const result = await supabase
-      .from("meter_readings")
-      .select(
-        "elec_consumption, water_consumption, elec_current_reading, elec_previous_reading, water_current_reading, water_previous_reading, shops(shop_code, shop_name)",
-      )
-      .eq("reading_month", month)
-      .eq("reading_year", year);
-    assertQuerySuccess(result.error, "تعذر قراءة بيانات العدادات");
-    const readings = (result.data ?? []) as unknown as ConsumptionReadingRow[];
-    const totalElec = readings.reduce((sum, reading) => sum + Number(reading.elec_consumption || 0), 0);
-    const totalWater = readings.reduce((sum, reading) => sum + Number(reading.water_consumption || 0), 0);
+    const readings = (await fetchAllRows(
+      (from, to) =>
+        supabase
+          .from("meter_readings")
+          .select(
+            "elec_consumption, water_consumption, elec_current_reading, elec_previous_reading, water_current_reading, water_previous_reading, shops(shop_code, shop_name)",
+          )
+          .eq("reading_month", month)
+          .eq("reading_year", year)
+          .range(from, to),
+      "تعذر قراءة بيانات العدادات",
+    )) as unknown as ConsumptionReadingRow[];
+    const totalElec = readings.reduce(
+      (sum, reading) => sum + Number(reading.elec_consumption || 0),
+      0,
+    );
+    const totalWater = readings.reduce(
+      (sum, reading) => sum + Number(reading.water_consumption || 0),
+      0,
+    );
     const rows: CsvRows = [
       ...summaryRows("استهلاك العدادات", monthLabel),
       ["عدد القراءات", readings.length],
       ["إجمالي استهلاك الكهرباء", totalElec],
       ["إجمالي استهلاك المياه", totalWater],
       [],
-      ["الوحدة", "كهرباء سابقة", "كهرباء حالية", "استهلاك الكهرباء", "ماء سابق", "ماء حالي", "استهلاك المياه"],
+      [
+        "الوحدة",
+        "كهرباء سابقة",
+        "كهرباء حالية",
+        "استهلاك الكهرباء",
+        "ماء سابق",
+        "ماء حالي",
+        "استهلاك المياه",
+      ],
       ...readings.map((reading) => [
         reading.shops ? `${reading.shops.shop_code} — ${reading.shops.shop_name}` : "",
         reading.elec_previous_reading,

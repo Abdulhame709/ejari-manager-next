@@ -372,16 +372,16 @@ function CustomersList() {
         description="استخدم القالب، راجع المعاينة، ثم أكد الإدراج. يدعم CSV وExcel ويمنع تكرار الجوال أو الهوية أو البريد داخل الملف أو في قاعدة البيانات."
         headers={["full_name", "phone", "email", "id_number", "address"]}
         headerAliases={{
-          "الاسم": "full_name",
+          الاسم: "full_name",
           "الاسم الكامل": "full_name",
           "رقم الجوال": "phone",
-          "الجوال": "phone",
-          "الهاتف": "phone",
+          الجوال: "phone",
+          الهاتف: "phone",
           "البريد الإلكتروني": "email",
           "البريد الالكتروني": "email",
           "رقم الهوية": "id_number",
-          "الهوية": "id_number",
-          "العنوان": "address",
+          الهوية: "id_number",
+          العنوان: "address",
         }}
         previewColumns={["full_name", "phone", "email", "id_number"]}
         parseRow={(row, rowNumber) => {
@@ -403,17 +403,25 @@ function CustomersList() {
           };
         }}
         onImport={async (rows) => {
-          const duplicateInFile = (values: string[]) =>
-            [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
+          const duplicateInFile = (values: string[]) => [
+            ...new Set(values.filter((value, index) => values.indexOf(value) !== index)),
+          ];
           const phones = rows.map((row) => row.phone.trim());
-          const idNumbers = rows.map((row) => row.id_number?.trim()).filter((value): value is string => !!value);
-          const emails = rows.map((row) => row.email?.trim().toLowerCase()).filter((value): value is string => !!value);
+          const idNumbers = rows
+            .map((row) => row.id_number?.trim())
+            .filter((value): value is string => !!value);
+          const emails = rows
+            .map((row) => row.email?.trim().toLowerCase())
+            .filter((value): value is string => !!value);
           const duplicatePhone = duplicateInFile(phones);
           const duplicateIdNumber = duplicateInFile(idNumbers);
           const duplicateEmail = duplicateInFile(emails);
-          if (duplicatePhone.length) throw new Error(`رقم جوال مكرر داخل الملف: ${duplicatePhone[0]}`);
-          if (duplicateIdNumber.length) throw new Error(`رقم هوية مكرر داخل الملف: ${duplicateIdNumber[0]}`);
-          if (duplicateEmail.length) throw new Error(`بريد إلكتروني مكرر داخل الملف: ${duplicateEmail[0]}`);
+          if (duplicatePhone.length)
+            throw new Error(`رقم جوال مكرر داخل الملف: ${duplicatePhone[0]}`);
+          if (duplicateIdNumber.length)
+            throw new Error(`رقم هوية مكرر داخل الملف: ${duplicateIdNumber[0]}`);
+          if (duplicateEmail.length)
+            throw new Error(`بريد إلكتروني مكرر داخل الملف: ${duplicateEmail[0]}`);
 
           const [phonesResult, idsResult, emailsResult] = await Promise.all([
             supabase.from("customers").select("id, phone").in("phone", phones),

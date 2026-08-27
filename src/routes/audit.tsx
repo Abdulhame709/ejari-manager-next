@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Filter, History, Loader2, Search, ShieldCheck } from "lucide-react";
@@ -65,7 +65,9 @@ function AuditPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("audit_log")
-        .select("id, table_name, record_id, action, old_values, new_values, user_id, user_name, created_at")
+        .select(
+          "id, table_name, record_id, action, old_values, new_values, user_id, user_name, created_at",
+        )
         .order("created_at", { ascending: false })
         .limit(250);
       if (error) throw error;
@@ -74,7 +76,8 @@ function AuditPage() {
   });
 
   const tableNames = useMemo(
-    () => [...new Set((auditQuery.data ?? []).map((entry) => entry.table_name).filter(Boolean))].sort(),
+    () =>
+      [...new Set((auditQuery.data ?? []).map((entry) => entry.table_name).filter(Boolean))].sort(),
     [auditQuery.data],
   );
 
@@ -109,8 +112,17 @@ function AuditPage() {
               متابعة العمليات الحساسة وحفظ مرجعها المحاسبي والتشغيلي.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => void auditQuery.refetch()} disabled={auditQuery.isFetching}>
-            {auditQuery.isFetching ? <Loader2 className="ml-1 h-4 w-4 animate-spin" /> : <Filter className="ml-1 h-4 w-4" />}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void auditQuery.refetch()}
+            disabled={auditQuery.isFetching}
+          >
+            {auditQuery.isFetching ? (
+              <Loader2 className="ml-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Filter className="ml-1 h-4 w-4" />
+            )}
             تحديث السجل
           </Button>
         </div>
@@ -119,8 +131,8 @@ function AuditPage() {
           <div className="flex gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <p>
-              يعرض هذا السجل آخر 250 عملية مسموحة لحسابك فقط. لا يعرض كلمات المرور أو المرفقات أو البيانات الحساسة
-              الكاملة؛ بل يقتصر على مرجع السجل والحالة والتغيير المسجل.
+              يعرض هذا السجل آخر 250 عملية مسموحة لحسابك فقط. لا يعرض كلمات المرور أو المرفقات أو
+              البيانات الحساسة الكاملة؛ بل يقتصر على مرجع السجل والحالة والتغيير المسجل.
             </p>
           </div>
         </Card>
@@ -154,11 +166,17 @@ function AuditPage() {
 
         <Card className="overflow-hidden">
           {auditQuery.isLoading ? (
-            <div className="flex justify-center p-16"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+            <div className="flex justify-center p-16">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+            </div>
           ) : auditQuery.isError ? (
-            <div className="p-10 text-center text-sm text-destructive">تعذر تحميل سجل التدقيق أو لا تملك صلاحية عرضه.</div>
+            <div className="p-10 text-center text-sm text-destructive">
+              تعذر تحميل سجل التدقيق أو لا تملك صلاحية عرضه.
+            </div>
           ) : entries.length === 0 ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">لا توجد عمليات تطابق عوامل التصفية الحالية.</div>
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              لا توجد عمليات تطابق عوامل التصفية الحالية.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -175,11 +193,21 @@ function AuditPage() {
                 <tbody>
                   {entries.map((entry) => (
                     <tr key={entry.id} className="border-t align-top hover:bg-muted/20">
-                      <td className="whitespace-nowrap p-3 text-xs text-muted-foreground">{formatAuditDate(entry.created_at)}</td>
-                      <td className="p-3 font-semibold">{ACTION_LABELS[entry.action] ?? entry.action}</td>
+                      <td className="whitespace-nowrap p-3 text-xs text-muted-foreground">
+                        {formatAuditDate(entry.created_at)}
+                      </td>
+                      <td className="p-3 font-semibold">
+                        {ACTION_LABELS[entry.action] ?? entry.action}
+                      </td>
                       <td className="p-3">{TABLE_LABELS[entry.table_name] ?? entry.table_name}</td>
-                      <td className="max-w-36 truncate p-3 font-mono text-xs">{entry.record_id ?? "—"}</td>
-                      <td className="max-w-md p-3 text-muted-foreground">{summarizeValues(entry.new_values) || summarizeValues(entry.old_values) || "—"}</td>
+                      <td className="max-w-36 truncate p-3 font-mono text-xs">
+                        {entry.record_id ?? "—"}
+                      </td>
+                      <td className="max-w-md p-3 text-muted-foreground">
+                        {summarizeValues(entry.new_values) ||
+                          summarizeValues(entry.old_values) ||
+                          "—"}
+                      </td>
                       <td className="p-3">{entry.user_name ?? entry.user_id ?? "النظام"}</td>
                     </tr>
                   ))}
@@ -189,7 +217,9 @@ function AuditPage() {
           )}
         </Card>
         {!auditQuery.isLoading && !auditQuery.isError && (
-          <p className="text-xs text-muted-foreground">عدد العمليات المعروضة: {entries.length} من آخر 250 عملية.</p>
+          <p className="text-xs text-muted-foreground">
+            عدد العمليات المعروضة: {entries.length} من آخر 250 عملية.
+          </p>
         )}
       </div>
     </AppLayout>
