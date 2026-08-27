@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, ArrowRight, Loader2, Printer } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Printer,
+  RotateCcw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { RouteGuard } from "@/components/route-guard";
 import {
@@ -80,6 +88,7 @@ function InvoiceBatchPrintPage() {
   const router = useRouter();
   const [layout, setLayout] = useState<BatchLayout>(4);
   const [sortMode, setSortMode] = useState<SortMode>("customer");
+  const [manualOrder, setManualOrder] = useState<string[] | null>(null);
 
   const invoiceIds = useMemo(
     () =>
@@ -126,8 +135,36 @@ function InvoiceBatchPrintPage() {
   });
 
   const invoices = useMemo(() => invoicesQuery.data ?? [], [invoicesQuery.data]);
-  const sortedInvoices = useMemo(() => sortInvoices(invoices, sortMode), [invoices, sortMode]);
-  const printPages = useMemo(() => chunk(sortedInvoices, layout), [sortedInvoices, layout]);
+  const automaticallySortedInvoices = useMemo(
+    () => sortInvoices(invoices, sortMode),
+    [invoices, sortMode],
+  );
+  const orderedInvoices = useMemo(() => {
+    if (!manualOrder) return automaticallySortedInvoices;
+    const invoicesById = new Map(invoices.map((invoice) => [invoice.id, invoice]));
+    const manuallyOrdered = manualOrder
+      .map((invoiceId) => invoicesById.get(invoiceId))
+      .filter((invoice): invoice is BatchInvoice => Boolean(invoice));
+    const manuallyOrderedIds = new Set(manuallyOrdered.map((invoice) => invoice.id));
+    return [
+      ...manuallyOrdered,
+      ...automaticallySortedInvoices.filter((invoice) => !manuallyOrderedIds.has(invoice.id)),
+    ];
+  }, [automaticallySortedInvoices, invoices, manualOrder]);
+  const printPages = useMemo(() => chunk(orderedInvoices, layout), [orderedInvoices, layout]);
+
+  function moveInvoice(invoiceId: string, direction: "up" | "down") {
+    setManualOrder((currentOrder) => {
+      const nextOrder = currentOrder
+        ? [...currentOrder]
+        : orderedInvoices.map((invoice) => invoice.id);
+      const index = nextOrder.indexOf(invoiceId);
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (index < 0 || targetIndex < 0 || targetIndex >= nextOrder.length) return nextOrder;
+      [nextOrder[index], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[index]];
+      return nextOrder;
+    });
+  }
 
   if (invoiceIds.length === 0) {
     return <BatchPrintError message="لم يتم اختيار فواتير صالحة للطباعة الجماعية." />;
@@ -182,7 +219,10 @@ function InvoiceBatchPrintPage() {
             ترتيب الفواتير
             <select
               value={sortMode}
-              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              onChange={(event) => {
+                setSortMode(event.target.value as SortMode);
+                setManualOrder(null);
+              }}
               className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900"
             >
               <option value="customer">المستأجر ثم الوحدة</option>
@@ -211,6 +251,61 @@ function InvoiceBatchPrintPage() {
             </div>
           </fieldset>
         </div>
+        <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xs font-black text-slate-700">ترتيب يدوي قبل الطباعة</h2>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                قدّم أو أخّر أي فاتورة؛ يتغير توزيعها بين صفحات الطباعة فوراً.
+              </p>
+            </div>
+            {manualOrder && (
+              <button
+                type="button"
+                onClick={() => setManualOrder(null)}
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-300 bg-white px-3 text-xs font-bold text-slate-700 transition hover:bg-slate-100"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> إعادة للترتيب التلقائي
+              </button>
+            )}
+          </div>
+          <ol className="mt-3 grid max-h-52 gap-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-2 sm:grid-cols-2">
+            {orderedInvoices.map((invoice, index) => (
+              <li
+                key={invoice.id}
+                className="flex min-w-0 items-center gap-2 rounded border border-slate-100 px-2 py-1.5 text-xs"
+              >
+                <span className="w-5 shrink-0 text-center font-mono text-slate-400">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-semibold" title={invoice.invoice_no}>
+                  {invoice.invoice_no} — {invoice.shops?.shop_code ?? "—"} —{" "}
+                  {invoice.customers?.full_name ?? "—"}
+                </span>
+                <span className="flex shrink-0 gap-0.5">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => moveInvoice(invoice.id, "up")}
+                    className="rounded p-1 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`تقديم الفاتورة ${invoice.invoice_no}`}
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === orderedInvoices.length - 1}
+                    onClick={() => moveInvoice(invoice.id, "down")}
+                    className="rounded p-1 text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label={`تأخير الفاتورة ${invoice.invoice_no}`}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
       </section>
 
       <div className="mx-auto max-w-[210mm] space-y-6">
