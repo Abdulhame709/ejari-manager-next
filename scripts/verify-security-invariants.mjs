@@ -64,6 +64,32 @@ assert(
   "contract renewal must remain unavailable to anonymous callers",
 );
 
+const roleHelperMigration = readProjectFile(
+  "supabase/migrations/20260827030000_secure_rls_role_helpers.sql",
+);
+assert(
+  roleHelperMigration.includes("SECURITY DEFINER") &&
+    roleHelperMigration.includes("SET search_path = public, pg_temp"),
+  "RLS role helpers must retain a secure definer context and fixed search path",
+);
+assert(
+  roleHelperMigration.includes("auth.uid() IS NOT NULL") &&
+    roleHelperMigration.includes("_user_id = auth.uid()"),
+  "RLS role helpers must limit role checks to the caller's own identity",
+);
+assert(
+  roleHelperMigration.includes("REVOKE ALL ON FUNCTION public.has_role") &&
+    roleHelperMigration.includes("REVOKE ALL ON FUNCTION public.has_any_role") &&
+    roleHelperMigration.includes("REVOKE ALL ON FUNCTION public.is_staff") &&
+    roleHelperMigration.includes("FROM PUBLIC, anon") &&
+    roleHelperMigration.includes("GRANT EXECUTE ON FUNCTION public.has_role") &&
+    roleHelperMigration.includes("GRANT EXECUTE ON FUNCTION public.has_any_role") &&
+    roleHelperMigration.includes("GRANT EXECUTE ON FUNCTION public.is_staff") &&
+    roleHelperMigration.includes("TO authenticated") &&
+    !roleHelperMigration.includes("TO PUBLIC"),
+  "RLS role helpers must be executable by authenticated callers only",
+);
+
 const dashboardMigration = readProjectFile(
   "supabase/migrations/20260827020000_dashboard_stats_rpc.sql",
 );
@@ -79,5 +105,5 @@ assert(
 );
 
 console.log(
-  "Security guards verified: browser bundle isolation, server-only service key, and authenticated transactional RPC grants.",
+  "Security guards verified: browser bundle isolation, server-only service key, authenticated transactional RPC grants, and self-scoped RLS role helpers.",
 );
