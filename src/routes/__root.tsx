@@ -58,7 +58,9 @@ export const Route = createRootRoute({
         ...(googleVerify ? [{ name: "google-site-verification", content: googleVerify }] : []),
         ...(bingVerify ? [{ name: "msvalidate.01", content: bingVerify }] : []),
         ...(yandexVerify ? [{ name: "yandex-verification", content: yandexVerify }] : []),
-        // Apple PWA
+        // تطبيقات الويب على الهاتف: الوسم الحديث مطلوب للمتصفحات الحالية،
+        // مع الإبقاء على وسم Apple للتوافق مع Safari على iOS.
+        { name: "mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
         { name: "apple-mobile-web-app-title", content: SITE_NAME },
