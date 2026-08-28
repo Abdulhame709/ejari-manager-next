@@ -351,6 +351,7 @@ export type Database = {
           invoice_date: string;
           invoice_month: number;
           invoice_no: string;
+          invoice_number_serial: number | null;
           invoice_year: number;
           notes: string | null;
           paid_amount: number;
@@ -387,6 +388,7 @@ export type Database = {
           invoice_date?: string;
           invoice_month: number;
           invoice_no: string;
+          invoice_number_serial?: number | null;
           invoice_year: number;
           notes?: string | null;
           paid_amount?: number;
@@ -423,6 +425,7 @@ export type Database = {
           invoice_date?: string;
           invoice_month?: number;
           invoice_no?: string;
+          invoice_number_serial?: number | null;
           invoice_year?: number;
           notes?: string | null;
           paid_amount?: number;
