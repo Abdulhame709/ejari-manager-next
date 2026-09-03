@@ -23,6 +23,15 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">جارٍ التحقق من الجلسة والصلاحيات...</p>
+          <p className="mt-4 text-xs text-muted-foreground">
+            إذا استمر الانتظار، يمكنك فتح صفحة الدخول مباشرة.
+          </p>
+          <a
+            href="/login"
+            className="mt-2 inline-flex rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            فتح صفحة الدخول
+          </a>
         </div>
       </div>
     );

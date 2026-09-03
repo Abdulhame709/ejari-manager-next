@@ -5,7 +5,7 @@
  *  - Navigations & API: network-first (never serve stale financial data);
  *    falls back to the cached shell when offline.
  */
-const VERSION = "ejari-v1";
+const VERSION = "ejari-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = "/offline.html";
