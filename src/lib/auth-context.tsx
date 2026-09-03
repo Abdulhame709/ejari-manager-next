@@ -124,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessError, setAccessError] = useState<string | null>(null);
 
   const mountedRef = useRef(false);
+  const loadingRef = useRef(loading);
   const currentUserIdRef = useRef<string | null>(null);
   const profileRequestRef = useRef(0);
 
@@ -280,6 +281,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     mountedRef.current = true;
 
+    // A final UI watchdog prevents a permanently blocked screen if browser
+    // storage, a stalled auth lock, or a network layer never settles. The
+    // normal auth/profile timeouts still handle the expected error message;
+    // this only covers an unexpected promise or callback failure.
+    const initializationWatchdog = window.setTimeout(() => {
+      if (!mountedRef.current || !loadingRef.current) return;
+      console.error("Authentication initialization watchdog expired");
+      setLoading(false);
+      setAccessError("تعذر إكمال التحقق تلقائياً. أعد تحميل الصفحة أو سجّل الدخول من جديد.");
+    }, PROFILE_TIMEOUT_MS + 5_000);
+
     // The callback remains synchronous. Never return/await a profile query here.
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       applySession(nextSession);
@@ -294,6 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mountedRef.current = false;
+      window.clearTimeout(initializationWatchdog);
       profileRequestRef.current += 1;
       listener.subscription.unsubscribe();
     };
@@ -304,6 +317,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signOut();
     if (error) console.error("Failed to sign out from Supabase", error);
   }, [applySession]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   const userRole = role;
   const isStaff = isStaffRole(role);
