@@ -1,0 +1,54 @@
+name: Daily encrypted Supabase backup
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dump, encrypt, and upload to Google Drive
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      RCLONE_CONFIG: ${{ runner.temp }}/rclone.conf
+      RCLONE_CONFIG_CONTENT: ${{ secrets.RCLONE_CONFIG_CONTENT }}
+      GDRIVE_BACKUP_PATH: ${{ vars.GDRIVE_BACKUP_PATH || 'manus_google_drive:Ejari Manager Backups' }}
+      BACKUP_RETENTION_DAYS: "35"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client and rclone
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client gnupg
+          curl --fail --silent --show-error https://rclone.org/install.sh | sudo bash
+
+      - name: Write ephemeral rclone configuration
+        shell: bash
+        run: |
+          test -n "$SUPABASE_DB_URL"
+          test -n "$BACKUP_ENCRYPTION_PASSPHRASE"
+          test -n "$RCLONE_CONFIG_CONTENT"
+          umask 077
+          printf '%s' "$RCLONE_CONFIG_CONTENT" > "$RCLONE_CONFIG"
+
+      - name: Create and upload encrypted backup
+        shell: bash
+        run: ./scripts/backup-supabase-to-drive.sh
+
+      - name: Remove ephemeral credentials
+        if: always()
+        shell: bash
+        run: rm -f "$RCLONE_CONFIG"
