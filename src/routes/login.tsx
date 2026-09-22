@@ -163,6 +163,7 @@ function LoginPage() {
   const [emailVerificationMode, setEmailVerificationMode] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
+  const [sessionRecoveryReady, setSessionRecoveryReady] = useState(false);
 
   const isArabic = language === "ar";
   const t = content[language];
@@ -178,6 +179,19 @@ function LoginPage() {
       void navigate({ to: "/", replace: true });
     }
   }, [loading, navigate, role, user]);
+
+  useEffect(() => {
+    if (!loading || !user) {
+      setSessionRecoveryReady(false);
+      return;
+    }
+
+    // Embedded browsers can restore a stale Supabase session that never
+    // finishes its profile request. Keep the login form reachable instead of
+    // trapping the user on the permissions spinner.
+    const recoveryTimer = window.setTimeout(() => setSessionRecoveryReady(true), 8_000);
+    return () => window.clearTimeout(recoveryTimer);
+  }, [loading, user]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -439,12 +453,28 @@ function LoginPage() {
                   <LogOut className="h-4 w-4" /> {t.signOut}
                 </button>
               </div>
-            ) : loading && user ? (
+            ) : loading && user && !sessionRecoveryReady ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-[0_12px_38px_rgba(15,43,83,.08)]">
                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
                 <p className="mt-4 text-sm font-semibold text-slate-600">
                   {isArabic ? "جارٍ التحقق من الصلاحيات..." : "Checking permissions..."}
                 </p>
+              </div>
+            ) : loading && user && sessionRecoveryReady ? (
+              <div className="rounded-2xl border border-amber-200 bg-white p-7 text-center shadow-[0_12px_38px_rgba(15,43,83,.08)]">
+                <ShieldAlert className="mx-auto h-8 w-8 text-amber-600" />
+                <p className="mt-4 text-sm leading-6 text-slate-600">
+                  {isArabic
+                    ? "تعذر استعادة الجلسة السابقة. سجّل الدخول من جديد للمتابعة."
+                    : "The previous session could not be restored. Sign in again to continue."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-sm font-bold text-white transition hover:bg-slate-800"
+                >
+                  <LogOut className="h-4 w-4" /> {t.signOut}
+                </button>
               </div>
             ) : forgotMode ? (
               <ResetForm
