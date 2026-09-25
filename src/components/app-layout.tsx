@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Navigate, useLocation, useNavigate } from "@tanstack/react-router";
+import { Navigate, useLocation } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -14,20 +14,20 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, role, loading, accessError } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-
   useEffect(() => {
     if (!loading) return;
 
     // A persisted mobile session can become unreadable after a Supabase
     // restart or a browser restore. Do not leave the user on a spinner: the
-    // login page is public and lets the user establish a fresh session.
+    // login page is public and lets the user establish a fresh session. Use a
+    // native browser navigation here instead of the client router: embedded
+    // browsers can leave the router navigation promise unresolved.
     const fallback = window.setTimeout(() => {
-      void navigate({ to: "/login", replace: true });
-    }, 7_000);
+      window.location.replace("/login");
+    }, 3_000);
 
     return () => window.clearTimeout(fallback);
-  }, [loading, navigate]);
+  }, [loading]);
 
   if (loading) {
     return (
