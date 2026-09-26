@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/app-layout";
@@ -21,6 +21,12 @@ import { useAuth } from "@/lib/auth-context";
 import { canAccessPath } from "@/lib/access-control";
 
 export const Route = createFileRoute("/")({
+  // The root URL is the public entry point shared with users. Do not mount
+  // the dashboard/AuthProvider first: that made a stale mobile session show
+  // the permissions spinner before the user could reach login.
+  beforeLoad: () => {
+    throw redirect({ to: "/login" });
+  },
   head: () => ({
     meta: [
       { title: "لوحة التحكم — إيجاري EJARI" },
