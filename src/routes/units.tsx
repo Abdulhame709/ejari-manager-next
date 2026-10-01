@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -102,10 +102,17 @@ function UnitsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"code" | "rent-low" | "rent-high">("code");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [viewUnit, setViewUnit] = useState<PublicUnit | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   const qc = useQueryClient();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -126,7 +133,7 @@ function UnitsPage() {
   }
 
   const { data: units = [], isLoading } = useQuery<PublicUnit[]>({
-    queryKey: ["public-units", search, typeFilter],
+    queryKey: ["public-units", debouncedSearch, typeFilter, sortBy],
     queryFn: async () => {
       let q = supabase
         .from("shops")
@@ -136,13 +143,18 @@ function UnitsPage() {
         .eq("is_public", true)
         .eq("is_active", true)
         .eq("status", "available");
-      if (search.trim())
+      if (debouncedSearch)
         q = q.or(
-          `shop_name.ilike.%${sanitizeSearchTerm(search)}%,description.ilike.%${sanitizeSearchTerm(search)}%,location_details.ilike.%${sanitizeSearchTerm(search)}%`,
+          `shop_name.ilike.%${sanitizeSearchTerm(debouncedSearch)}%,description.ilike.%${sanitizeSearchTerm(debouncedSearch)}%,location_details.ilike.%${sanitizeSearchTerm(debouncedSearch)}%`,
         );
       if (typeFilter !== "all")
         q = q.eq("unit_type", typeFilter as Database["public"]["Enums"]["unit_type"]);
-      q = q.order("shop_code").limit(60);
+      q = q
+        .order(sortBy === "code" ? "shop_code" : "monthly_rent", {
+          ascending: sortBy !== "rent-high",
+          nullsFirst: false,
+        })
+        .limit(60);
       const { data } = await q;
       return (data ?? []) as PublicUnit[];
     },
@@ -235,13 +247,20 @@ function UnitsPage() {
             <div className="flex flex-1 items-center gap-2 px-3 text-slate-400">
               <Search className="h-5 w-5" />
               <input
+                aria-label="البحث في الوحدات المتاحة"
                 className="h-10 w-full text-sm text-slate-800 outline-none"
                 placeholder="ابحث بالمنطقة أو اسم الوحدة..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <button className="h-10 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white hover:bg-blue-700">
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("units")?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="h-10 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white hover:bg-blue-700"
+            >
               بحث
             </button>
           </div>
@@ -255,7 +274,7 @@ function UnitsPage() {
             <h2 className="mt-1 text-2xl font-extrabold">الوحدات المعروضة</h2>
             <p className="mt-2 text-sm text-slate-500">{units.length} وحدة متاحة حالياً</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
             <TypeBtn active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>
               الكل
             </TypeBtn>
@@ -264,6 +283,32 @@ function UnitsPage() {
                 {v}
               </TypeBtn>
             ))}
+            <label className="sr-only" htmlFor="unit-sort">
+              ترتيب الوحدات
+            </label>
+            <select
+              id="unit-sort"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as typeof sortBy)}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-600 outline-none focus:border-blue-500"
+            >
+              <option value="code">الترتيب الافتراضي</option>
+              <option value="rent-low">الأقل إيجاراً</option>
+              <option value="rent-high">الأعلى إيجاراً</option>
+            </select>
+            {(search || typeFilter !== "all" || sortBy !== "code") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setTypeFilter("all");
+                  setSortBy("code");
+                }}
+                className="text-xs font-bold text-rose-600 hover:text-rose-700"
+              >
+                مسح التصفية
+              </button>
+            )}
           </div>
         </div>
 
