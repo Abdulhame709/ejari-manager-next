@@ -24,6 +24,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as UnitsRouteImport } from './routes/units'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as ViewingRequestsRouteImport } from './routes/viewing-requests'
 import { Route as AdminPaymentRequestsRouteImport } from './routes/admin/payment-requests'
 import { Route as InvoicesPrintBatchRouteImport } from './routes/invoices_.print-batch'
 import { Route as ShopsIndexRouteImport } from './routes/shops/index'
@@ -111,6 +112,11 @@ const UsersRoute = UsersRouteImport.update({
   path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ViewingRequestsRoute = ViewingRequestsRouteImport.update({
+  id: '/viewing-requests',
+  path: '/viewing-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminPaymentRequestsRoute = AdminPaymentRequestsRouteImport.update({
   id: '/admin/payment-requests',
   path: '/admin/payment-requests',
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/units': typeof UnitsRoute
   '/users': typeof UsersRoute
+  '/viewing-requests': typeof ViewingRequestsRoute
   '/admin/payment-requests': typeof AdminPaymentRequestsRoute
   '/invoices/print-batch': typeof InvoicesPrintBatchRoute
   '/tenant/invoices': typeof TenantInvoicesRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/units': typeof UnitsRoute
   '/users': typeof UsersRoute
+  '/viewing-requests': typeof ViewingRequestsRoute
   '/admin/payment-requests': typeof AdminPaymentRequestsRoute
   '/invoices/print-batch': typeof InvoicesPrintBatchRoute
   '/tenant/invoices': typeof TenantInvoicesRoute
@@ -240,6 +248,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/units': typeof UnitsRoute
   '/users': typeof UsersRoute
+  '/viewing-requests': typeof ViewingRequestsRoute
   '/admin/payment-requests': typeof AdminPaymentRequestsRoute
   '/invoices_/print-batch': typeof InvoicesPrintBatchRoute
   '/tenant/invoices': typeof TenantInvoicesRoute
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/units'
     | '/users'
+    | '/viewing-requests'
     | '/admin/payment-requests'
     | '/invoices/print-batch'
     | '/tenant/invoices'
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/units'
     | '/users'
+    | '/viewing-requests'
     | '/admin/payment-requests'
     | '/invoices/print-batch'
     | '/tenant/invoices'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/units'
     | '/users'
+    | '/viewing-requests'
     | '/admin/payment-requests'
     | '/invoices_/print-batch'
     | '/tenant/invoices'
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   UnitsRoute: typeof UnitsRoute
   UsersRoute: typeof UsersRoute
+  ViewingRequestsRoute: typeof ViewingRequestsRoute
   AdminPaymentRequestsRoute: typeof AdminPaymentRequestsRoute
   InvoicesPrintBatchRoute: typeof InvoicesPrintBatchRoute
   TenantInvoicesRoute: typeof TenantInvoicesRoute
@@ -475,6 +488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/viewing-requests': {
+      id: '/viewing-requests'
+      path: '/viewing-requests'
+      fullPath: '/viewing-requests'
+      preLoaderRoute: typeof ViewingRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/payment-requests': {
       id: '/admin/payment-requests'
       path: '/admin/payment-requests'
@@ -571,6 +591,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   UnitsRoute: UnitsRoute,
   UsersRoute: UsersRoute,
+  ViewingRequestsRoute: ViewingRequestsRoute,
   AdminPaymentRequestsRoute: AdminPaymentRequestsRoute,
   InvoicesPrintBatchRoute: InvoicesPrintBatchRoute,
   TenantInvoicesRoute: TenantInvoicesRoute,

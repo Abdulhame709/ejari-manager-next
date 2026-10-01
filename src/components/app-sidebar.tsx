@@ -17,6 +17,7 @@ import {
   UserRound,
   Users,
   Wallet,
+  CalendarCheck,
 } from "lucide-react";
 import { EjariLogo } from "@/components/ejari-logo";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -61,6 +62,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "طلبات الدفع",
     icon: BadgeCheck,
     roles: PAGE_ROLES.paymentRequests,
+  },
+  {
+    to: "/viewing-requests",
+    label: "طلبات المعاينة",
+    icon: CalendarCheck,
+    roles: PAGE_ROLES.viewingRequests,
   },
   { to: "/reports", label: "التقارير", icon: BarChart3, roles: PAGE_ROLES.reports },
   { to: "/users", label: "المستخدمون والطلبات", icon: ShieldCheck, roles: PAGE_ROLES.users },

@@ -22,6 +22,7 @@ export const PAGE_ROLES = {
   receipts: ["admin", "manager", "accountant"],
   reports: ["admin", "manager", "accountant", "viewer"],
   paymentRequests: ["admin", "manager", "accountant"],
+  viewingRequests: ["admin", "manager", "data_entry"],
   users: ["admin", "manager"],
   permissions: ["admin"],
   settings: ["admin", "manager"],
@@ -55,6 +56,9 @@ export function canAccessPath(role: AppRole | null, pathname: string): boolean {
   if (normalized === "/") return hasAnyRole(role, PAGE_ROLES.dashboard);
   if (normalized.startsWith("/admin/payment-requests")) {
     return hasAnyRole(role, PAGE_ROLES.paymentRequests);
+  }
+  if (normalized.startsWith("/viewing-requests")) {
+    return hasAnyRole(role, PAGE_ROLES.viewingRequests);
   }
   if (normalized.startsWith("/properties")) return hasAnyRole(role, PAGE_ROLES.properties);
   if (normalized.startsWith("/shops")) return hasAnyRole(role, PAGE_ROLES.shops);
