@@ -293,8 +293,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, PROFILE_TIMEOUT_MS + 5_000);
 
     // The callback remains synchronous. Never return/await a profile query here.
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      applySession(nextSession);
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // A user can sign in again while the browser still holds the same user
+      // id. Force a fresh profile/role read for SIGNED_IN; otherwise the
+      // same-user fast path can preserve a previous failed permission load.
+      applySession(nextSession, event === "SIGNED_IN" || event === "USER_UPDATED");
     });
 
     void withTimeout(supabase.auth.getSession(), PROFILE_TIMEOUT_MS)
